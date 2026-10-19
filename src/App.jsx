@@ -78,10 +78,17 @@ export default function App() {
   };
 
   const handleLogin = (userData) => {
-    // Mark every local session as a demo user; no real authentication is happening.
-    const stampedUser = { ...userData, _demo: true };
-    setUser(stampedUser);
-    localStorage.setItem('beep_user', JSON.stringify(stampedUser));
+    setUser(userData);
+    localStorage.setItem('beep_user', JSON.stringify(userData));
+
+    // Also persist in local registered students list
+    try {
+      const all = JSON.parse(localStorage.getItem('beep_registered_students') || '[]');
+      const filtered = all.filter(u => u.email?.toLowerCase() !== userData.email?.toLowerCase());
+      localStorage.setItem('beep_registered_students', JSON.stringify([userData, ...filtered]));
+    } catch {
+      // ignore
+    }
   };
 
   const handleLogout = () => {

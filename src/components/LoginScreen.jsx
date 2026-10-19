@@ -1,99 +1,179 @@
-import React, { useState, useEffect } from 'react';
-import { Sparkles, Shield, CheckCircle2, Sun, Moon, UserCheck, ArrowRight, X, Building, Mail, User } from 'lucide-react';
-
-// Safe client-side JWT decoder for Google Identity credential token
-function parseJwt(token) {
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-    return JSON.parse(jsonPayload);
-  } catch {
-    return null;
-  }
-}
+import React, { useState } from 'react';
+import { 
+  Sparkles, Shield, CheckCircle2, Sun, Moon, ArrowRight, 
+  Mail, User, Building, GraduationCap, UserPlus, LogIn, X
+} from 'lucide-react';
 
 export default function LoginScreen({ onLogin, theme, toggleTheme }) {
-  const [showGoogleModal, setShowGoogleModal] = useState(false);
-  const [showCustomModal, setShowCustomModal] = useState(false);
-  const [customEmail, setCustomEmail] = useState('');
-  const [customName, setCustomName] = useState('');
-  const [customCollege, setCustomCollege] = useState('');
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+  const [emailInput, setEmailInput] = useState('');
+  const [existingUser, setExistingUser] = useState(null);
+  const [isNewUserStep, setIsNewUserStep] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [savedAccounts, setSavedAccounts] = useState(() => {
+    try {
+      const stored = localStorage.getItem('beep_registered_students');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  });
+
+  // Registration Form Fields for New Students
+  const [fullName, setFullName] = useState('');
+  const [collegeName, setCollegeName] = useState('');
+  const [gradYear, setGradYear] = useState('');
+  const [inputError, setInputError] = useState('');
 
   const isDark = theme === 'dark';
 
-  // Initialize official Google Identity Services if a client ID is available
-  useEffect(() => {
-    if (!googleClientId) return;
+  // Check if an email exists locally or in the backend
+  const lookupEmail = async (emailToCheck) => {
+    const clean = emailToCheck.trim().toLowerCase();
+    if (!clean) {
+      setExistingUser(null);
+      setIsNewUserStep(false);
+      return;
+    }
 
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      if (window.google?.accounts?.id) {
-        window.google.accounts.id.initialize({
-          client_id: googleClientId,
-          callback: (response) => {
-            const data = parseJwt(response.credential);
-            if (data) {
-              onLogin({
-                name: data.name || data.given_name || 'Google Student',
-                email: data.email,
-                avatar: data.picture || null,
-                college: 'Verified Google Student',
-                _verifiedGoogle: true
-              });
-            }
-          }
-        });
+    // 1. Check local saved list first
+    const localMatch = savedAccounts.find(a => a.email?.toLowerCase() === clean);
+    if (localMatch) {
+      setExistingUser(localMatch);
+      setIsNewUserStep(false);
+      return;
+    }
 
-        const targetEl = document.getElementById('gsi-button-container');
-        if (targetEl) {
-          window.google.accounts.id.renderButton(targetEl, {
-            theme: isDark ? 'filled_black' : 'outline',
-            size: 'large',
-            shape: 'pill',
-            text: 'continue_with',
-            width: 320
-          });
+    // 2. Check backend API
+    setIsCheckingEmail(true);
+    try {
+      const resp = await fetch(`/api/users/lookup?email=${encodeURIComponent(clean)}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.found && data.user) {
+          setExistingUser(data.user);
+          setIsNewUserStep(false);
+          setIsCheckingEmail(false);
+          return;
         }
       }
-    };
-    document.body.appendChild(script);
+    } catch {
+      // Backend lookup failed, proceed with local check
+    } finally {
+      setIsCheckingEmail(false);
+    }
 
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, [googleClientId, isDark, onLogin]);
-
-  // Fast 1-Click Sandbox Student Login
-  const handleFastStudentLogin = () => {
-    onLogin({
-      name: 'Priya Sharma',
-      email: 'priya.sharma@college.edu',
-      college: 'Pre-final Year B.Tech CSE (Tier-2/3)',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop&crop=faces',
-      _demo: true
-    });
+    setExistingUser(null);
   };
 
-  const handleCustomSubmit = (e) => {
+  // Handle email input change
+  const handleEmailChange = (e) => {
+    const val = e.target.value;
+    setEmailInput(val);
+    setInputError('');
+
+    if (/^\S+@\S+\.\S+$/.test(val.trim())) {
+      lookupEmail(val);
+    } else {
+      setExistingUser(null);
+      setIsNewUserStep(false);
+    }
+  };
+
+  // Step 1: User submits email
+  const handleEmailSubmit = (e) => {
     e.preventDefault();
-    if (!customEmail) return;
-    const name = customName.trim() || customEmail.split('@')[0];
-    onLogin({
-      name,
-      email: customEmail,
-      college: customCollege.trim() || 'College Student (India)',
+    const cleanEmail = emailInput.trim().toLowerCase();
+
+    if (!cleanEmail || !/^\S+@\S+\.\S+$/.test(cleanEmail)) {
+      setInputError('Please enter a valid email address.');
+      return;
+    }
+
+    // If returning user: directly log in!
+    if (existingUser) {
+      onLogin(existingUser);
+      return;
+    }
+
+    // If new user: advance to details input
+    setIsNewUserStep(true);
+  };
+
+  // Step 2: New user registers their details
+  const handleRegistrationSubmit = async (e) => {
+    e.preventDefault();
+    const cleanEmail = emailInput.trim().toLowerCase();
+    const cleanName = fullName.trim();
+    const cleanCollege = collegeName.trim();
+    const cleanYear = gradYear.trim();
+
+    if (!cleanName) {
+      setInputError('Please enter your full name.');
+      return;
+    }
+
+    const newProfile = {
+      name: cleanName,
+      email: cleanEmail,
+      college: cleanCollege || 'College Student (India)',
+      graduationYear: cleanYear || '2026',
       avatar: null,
-      _custom: true
+      registeredAt: new Date().toISOString()
+    };
+
+    // Save locally
+    try {
+      const currentList = JSON.parse(localStorage.getItem('beep_registered_students') || '[]');
+      const updated = [newProfile, ...currentList.filter(u => u.email?.toLowerCase() !== cleanEmail)];
+      localStorage.setItem('beep_registered_students', JSON.stringify(updated));
+      setSavedAccounts(updated);
+    } catch {
+      // ignore
+    }
+
+    // Save to server in background
+    try {
+      await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newProfile)
+      });
+    } catch {
+      // local save will suffice
+    }
+
+    // Directly log in the student
+    onLogin(newProfile);
+  };
+
+  // Direct login by clicking a saved student card
+  const handleQuickLogin = (account) => {
+    onLogin(account);
+  };
+
+  // Remove a saved profile from local list
+  const handleRemoveAccount = (e, emailToRemove) => {
+    e.stopPropagation();
+    const updated = savedAccounts.filter(a => a.email !== emailToRemove);
+    setSavedAccounts(updated);
+    localStorage.setItem('beep_registered_students', JSON.stringify(updated));
+    if (existingUser?.email === emailToRemove) {
+      setExistingUser(null);
+    }
+  };
+
+  // Fast Guest Login for evaluators
+  const handleGuestLogin = () => {
+    onLogin({
+      name: 'Student Guest',
+      email: 'guest.student@beep.edu',
+      college: 'Campus Job Seeker',
+      avatar: null,
+      _guest: true
     });
   };
 
@@ -151,7 +231,7 @@ export default function LoginScreen({ onLogin, theme, toggleTheme }) {
 
         <div className="max-w-md w-full relative z-10">
           
-          <div className={`p-8 rounded-3xl border shadow-2xl transition-all ${
+          <div className={`p-7 sm:p-8 rounded-3xl border shadow-2xl transition-all ${
             isDark 
               ? 'bg-slate-900/90 border-slate-800/90 shadow-purple-950/20' 
               : 'bg-white border-slate-200 shadow-slate-200/80'
@@ -164,83 +244,254 @@ export default function LoginScreen({ onLogin, theme, toggleTheme }) {
                 <span>Student Career Portal</span>
               </div>
               <h2 className={`text-2xl font-extrabold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                Sign In to Beep Radar
+                {isNewUserStep ? 'Create Your Student Profile' : 'Sign In to Beep Radar'}
               </h2>
               <p className={`text-xs mt-1.5 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Audit your college resume against real internship job descriptions and unlock your 7-day action sprint.
+                {isNewUserStep 
+                  ? 'First time here? Fill in your details once, and you can log in directly next time.'
+                  : 'Enter your Gmail or college email to audit your resume against real internships.'
+                }
               </p>
             </div>
 
-            {/* Quick Sandbox Access Badge */}
-            <div className={`mb-5 p-3 rounded-2xl border flex items-center gap-3 text-xs ${
-              isDark ? 'bg-purple-950/30 border-purple-500/30 text-purple-200' : 'bg-purple-50/70 border-purple-200 text-purple-900'
-            }`}>
-              <UserCheck className="w-5 h-5 text-purple-500 shrink-0" />
-              <div className="flex-1">
-                <span className="font-bold block">Instant Sandbox Access</span>
-                <span className="opacity-80 text-[11px]">Explore all features immediately with zero friction.</span>
+            {/* Error Message */}
+            {inputError && (
+              <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/40 text-rose-500 text-xs">
+                {inputError}
               </div>
-            </div>
+            )}
 
-            {/* Login Actions */}
-            <div className="space-y-3">
-              
-              {/* Primary 1-Click Fast Student Access */}
-              <button
-                type="button"
-                onClick={handleFastStudentLogin}
-                className="w-full flex items-center justify-between px-5 py-3.5 rounded-2xl font-bold text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-600/30 transition transform hover:-translate-y-0.5 cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center font-bold text-xs">
-                    P
-                  </div>
-                  <div className="text-left">
-                    <span className="block leading-tight">One-Click Fast Access</span>
-                    <span className="text-[10px] font-normal opacity-90">Priya Sharma (B.Tech Pre-Final)</span>
+            {/* Saved Accounts Quick-Picker (if returning user has registered profiles on this browser) */}
+            {!isNewUserStep && savedAccounts.length > 0 && !existingUser && (
+              <div className="mb-5 space-y-2">
+                <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Saved Student Profiles on this Device:
+                </span>
+                <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                  {savedAccounts.map((acc, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => handleQuickLogin(acc)}
+                      className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 text-left transition cursor-pointer group ${
+                        isDark 
+                          ? 'bg-slate-950/80 hover:bg-slate-800 border-slate-800 hover:border-purple-500/50' 
+                          : 'bg-slate-50 hover:bg-purple-50 border-slate-200 hover:border-purple-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                          {acc.name ? acc.name.charAt(0).toUpperCase() : 'S'}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold truncate leading-tight">{acc.name}</p>
+                          <p className={`text-[10px] truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{acc.email}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 group-hover:translate-x-0.5 transition-transform">
+                          Log In ➔
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => handleRemoveAccount(e, acc.email)}
+                          className="p-1 text-slate-400 hover:text-rose-500 transition rounded"
+                          title="Remove profile from this browser"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="relative flex items-center justify-center my-3">
+                  <div className={`border-t w-full ${isDark ? 'border-slate-800' : 'border-slate-200'}`} />
+                  <span className={`px-2 text-[10px] font-semibold uppercase tracking-wider relative ${
+                    isDark ? 'bg-slate-900 text-slate-500' : 'bg-white text-slate-400'
+                  }`}>
+                    or enter email
+                  </span>
+                  <div className={`border-t w-full ${isDark ? 'border-slate-800' : 'border-slate-200'}`} />
+                </div>
+              </div>
+            )}
+
+            {/* STEP 1: Enter Email Form */}
+            {!isNewUserStep ? (
+              <form onSubmit={handleEmailSubmit} className="space-y-3.5">
+                <div>
+                  <label className={`block text-xs font-bold mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Student Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
+                    <input
+                      type="email"
+                      required
+                      placeholder="your.email@gmail.com"
+                      value={emailInput}
+                      onChange={handleEmailChange}
+                      className={`w-full text-xs pl-10 pr-4 py-3 rounded-2xl border focus:outline-none focus:ring-2 focus:ring-purple-500 transition ${
+                        isDark 
+                          ? 'bg-slate-950 border-slate-800 text-white placeholder-slate-500' 
+                          : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                      }`}
+                    />
                   </div>
                 </div>
-                <ArrowRight className="w-4 h-4 opacity-80" />
-              </button>
 
-              {/* Official Google GIS Button Container (if Google Client ID provided) */}
-              {googleClientId ? (
-                <div id="gsi-button-container" className="flex justify-center pt-1" />
-              ) : (
-                /* Google OAuth Button with Configuration Modal */
+                {/* Returning User Banner: If email matches an existing profile */}
+                {existingUser && (
+                  <div className={`p-3 rounded-2xl border flex items-center justify-between gap-3 animate-fadeIn ${
+                    isDark ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200' : 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <div>
+                        <span className="font-bold text-xs block leading-tight">
+                          Welcome back, {existingUser.name}!
+                        </span>
+                        <span className="text-[10px] opacity-80">
+                          {existingUser.college || 'Verified Student'}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                      Profile Found
+                    </span>
+                  </div>
+                )}
+
+                {/* Submit Button */}
                 <button
-                  type="button"
-                  onClick={() => setShowGoogleModal(true)}
-                  className={`w-full flex items-center justify-center gap-3 px-5 py-3 rounded-2xl border font-semibold text-xs transition-all cursor-pointer shadow-sm hover:shadow-md ${
-                    isDark
-                      ? 'bg-slate-950 hover:bg-slate-800/80 border-slate-700 text-white'
-                      : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-800'
-                  }`}
+                  type="submit"
+                  disabled={isCheckingEmail}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 px-5 rounded-2xl font-bold text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-600/30 transition transform hover:-translate-y-0.5 cursor-pointer"
                 >
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                  </svg>
-                  <span>Continue with Google / Gmail</span>
+                  {existingUser ? (
+                    <>
+                      <LogIn className="w-4 h-4" />
+                      <span>Log In Directly as {existingUser.name} ➔</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Continue with Email</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
-              )}
 
-              {/* Custom Student Profile Button */}
-              <button
-                type="button"
-                onClick={() => setShowCustomModal(true)}
-                className={`w-full py-2.5 px-4 rounded-xl text-xs font-semibold border transition ${
-                  isDark
-                    ? 'border-slate-800 bg-slate-950/60 hover:bg-slate-800 text-slate-300'
-                    : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
-                }`}
-              >
-                Sign in with Your Own Details ➔
-              </button>
+                {/* Guest Access Alternative */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleGuestLogin}
+                    className={`w-full py-2.5 px-4 rounded-xl text-xs font-semibold border transition ${
+                      isDark
+                        ? 'border-slate-800 bg-slate-950/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200'
+                        : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Continue as Quick Guest ➔
+                  </button>
+                </div>
 
-            </div>
+              </form>
+            ) : (
+              /* STEP 2: New Student Details Form */
+              <form onSubmit={handleRegistrationSubmit} className="space-y-3.5 animate-fadeIn">
+                <div className={`p-3 rounded-2xl border flex items-center gap-2.5 text-xs ${
+                  isDark ? 'bg-purple-950/30 border-purple-500/30 text-purple-200' : 'bg-purple-50 border-purple-200 text-purple-900'
+                }`}>
+                  <UserPlus className="w-4 h-4 text-purple-500 shrink-0" />
+                  <div>
+                    <span className="font-bold block">New Student Registration</span>
+                    <span className="text-[10px] opacity-80">Linking profile to: <strong>{emailInput}</strong></span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className={`block text-xs font-bold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Your Full Name <span className="text-purple-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Aryan Kumar"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className={`w-full text-xs pl-10 pr-4 py-2.5 rounded-xl border focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                        isDark 
+                          ? 'bg-slate-950 border-slate-800 text-white placeholder-slate-500' 
+                          : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className={`block text-xs font-bold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    College / University & Branch
+                  </label>
+                  <div className="relative">
+                    <Building className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="e.g. MIT Pune, B.Tech CSE"
+                      value={collegeName}
+                      onChange={(e) => setCollegeName(e.target.value)}
+                      className={`w-full text-xs pl-10 pr-4 py-2.5 rounded-xl border focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                        isDark 
+                          ? 'bg-slate-950 border-slate-800 text-white placeholder-slate-500' 
+                          : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className={`block text-xs font-bold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Graduation Year / Semester
+                  </label>
+                  <div className="relative">
+                    <GraduationCap className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="e.g. 2026 (6th Semester)"
+                      value={gradYear}
+                      onChange={(e) => setGradYear(e.target.value)}
+                      className={`w-full text-xs pl-10 pr-4 py-2.5 rounded-xl border focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                        isDark 
+                          ? 'bg-slate-950 border-slate-800 text-white placeholder-slate-500' 
+                          : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsNewUserStep(false)}
+                    className={`px-4 py-2.5 rounded-xl text-xs font-semibold border transition ${
+                      isDark ? 'border-slate-800 text-slate-400 hover:text-white' : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md transition cursor-pointer"
+                  >
+                    <span>Save Profile & Enter Radar</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </form>
+            )}
 
             {/* Trust Badges */}
             <div className={`mt-6 pt-5 border-t space-y-2 text-[11px] ${
@@ -252,15 +503,11 @@ export default function LoginScreen({ onLogin, theme, toggleTheme }) {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-purple-500 shrink-0" />
-                <span>Transparent scoring: No hidden algorithm black holes</span>
+                <span>No password required: Easy login via your email</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-purple-500 shrink-0" />
-                <span>Includes 48-hr proof-of-work project & recruiter cold pitches</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <Shield className="w-3.5 h-3.5 text-purple-500 shrink-0 mt-0.5" />
-                <span>Your uploaded resume is audited in real-time and never shared.</span>
+                <Shield className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                <span>Your details are remembered on this device for instant access.</span>
               </div>
             </div>
 
@@ -272,172 +519,6 @@ export default function LoginScreen({ onLogin, theme, toggleTheme }) {
 
         </div>
       </main>
-
-      {/* Google OAuth Modal (Explains live Google Cloud integration + instant option) */}
-      {showGoogleModal && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className={`max-w-md w-full rounded-3xl p-6 border shadow-2xl relative ${
-            isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                </svg>
-                <h3 className="font-extrabold text-sm">Google Sign-In Integration</h3>
-              </div>
-              <button 
-                onClick={() => setShowGoogleModal(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="py-4 space-y-3 text-xs leading-relaxed">
-              <p className={isDark ? 'text-slate-300' : 'text-slate-600'}>
-                To enable live Google OAuth credentials in production, configure your Google Cloud Client ID in your environment:
-              </p>
-
-              <div className={`p-3 rounded-xl font-mono text-[11px] border ${
-                isDark ? 'bg-slate-950 border-slate-800 text-purple-300' : 'bg-slate-100 border-slate-200 text-purple-800'
-              }`}>
-                VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-              </div>
-
-              <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                For instant preview and evaluation without setting up Google Cloud API keys, click below to proceed directly:
-              </p>
-
-              <div className="pt-2 space-y-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowGoogleModal(false);
-                    handleFastStudentLogin();
-                  }}
-                  className="w-full py-2.5 rounded-xl font-bold text-xs bg-purple-600 hover:bg-purple-500 text-white shadow-md transition"
-                >
-                  Continue with Verified Student Profile (Priya Sharma)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowGoogleModal(false);
-                    setShowCustomModal(true);
-                  }}
-                  className={`w-full py-2.5 rounded-xl font-semibold text-xs border transition ${
-                    isDark ? 'border-slate-800 hover:bg-slate-800 text-slate-300' : 'border-slate-200 hover:bg-slate-50 text-slate-700'
-                  }`}
-                >
-                  Enter Your Custom Name & College
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Custom Student Modal */}
-      {showCustomModal && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className={`max-w-md w-full rounded-3xl p-6 border shadow-2xl relative ${
-            isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4 text-purple-500" />
-                <h3 className="font-extrabold text-sm">Create Your Student Profile</h3>
-              </div>
-              <button 
-                onClick={() => setShowCustomModal(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCustomSubmit} className="pt-4 space-y-3">
-              <div>
-                <label className={`block text-[11px] font-bold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                  Full Name
-                </label>
-                <div className="relative">
-                  <User className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Rahul Verma"
-                    value={customName}
-                    onChange={(e) => setCustomName(e.target.value)}
-                    className={`w-full text-xs pl-9 pr-3 py-2.5 rounded-xl border focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                      isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className={`block text-[11px] font-bold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
-                  <input
-                    type="email"
-                    required
-                    placeholder="rahul.verma@example.com"
-                    value={customEmail}
-                    onChange={(e) => setCustomEmail(e.target.value)}
-                    className={`w-full text-xs pl-9 pr-3 py-2.5 rounded-xl border focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                      isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className={`block text-[11px] font-bold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                  College / Degree
-                </label>
-                <div className="relative">
-                  <Building className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="e.g. Final Year B.Tech CSE"
-                    value={customCollege}
-                    onChange={(e) => setCustomCollege(e.target.value)}
-                    className={`w-full text-xs pl-9 pr-3 py-2.5 rounded-xl border focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                      isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCustomModal(false)}
-                  className={`px-3 py-2 rounded-xl text-xs border transition ${
-                    isDark ? 'border-slate-800 text-slate-400 hover:text-white' : 'border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-md transition"
-                >
-                  Enter Portal ➔
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Footer */}
       <footer className={`py-4 text-center text-xs border-t ${

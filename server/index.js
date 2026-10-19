@@ -326,6 +326,67 @@ app.get('/api/applications', (req, res) => {
   return res.json({ applications: all });
 });
 
+// ---------- User Profile persistence ----------
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+
+function ensureUsersFile() {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, '[]', 'utf8');
+}
+
+function readUsers() {
+  ensureUsersFile();
+  try {
+    return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+  } catch {
+    return [];
+  }
+}
+
+function saveUserRecord(userData) {
+  const all = readUsers();
+  const existingIdx = all.findIndex(u => u.email.toLowerCase() === userData.email.toLowerCase());
+  if (existingIdx >= 0) {
+    all[existingIdx] = { ...all[existingIdx], ...userData, updatedAt: new Date().toISOString() };
+  } else {
+    all.push({ ...userData, createdAt: new Date().toISOString() });
+  }
+  fs.writeFileSync(USERS_FILE, JSON.stringify(all, null, 2), 'utf8');
+  return all.find(u => u.email.toLowerCase() === userData.email.toLowerCase());
+}
+
+app.get('/api/users/lookup', (req, res) => {
+  const { email } = req.query;
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({ error: 'email is required' });
+  }
+  const all = readUsers();
+  const found = all.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
+  if (found) {
+    return res.json({ found: true, user: found });
+  }
+  return res.json({ found: false });
+});
+
+app.post('/api/users', (req, res) => {
+  const { name, email, college, graduationYear, avatar } = req.body || {};
+  if (!email || typeof email !== 'string' || !/^\S+@\S+\.\S+$/.test(email)) {
+    return res.status(400).json({ error: 'Valid email is required' });
+  }
+  if (!name || typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'Full name is required' });
+  }
+  const cleanUser = {
+    name: name.trim(),
+    email: email.trim().toLowerCase(),
+    college: (college || 'College Student').trim(),
+    graduationYear: (graduationYear || '').trim(),
+    avatar: avatar || null
+  };
+  const saved = saveUserRecord(cleanUser);
+  return res.json({ ok: true, user: saved });
+});
+
 // ---------- Client-safe analysis fallback (exported for reuse) ----------
 export { runDynamicHeuristicAnalysis };
 
