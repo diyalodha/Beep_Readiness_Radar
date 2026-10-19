@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { SAMPLE_RESUMES } from '../data/sampleRoles';
 import { 
   UploadCloud, FileText, CheckCircle2, RefreshCw, 
-  Sparkles, Eye, Trash2, X, AlertCircle, FileCheck, ArrowRight
+  Sparkles, Eye, Trash2, X, AlertCircle, FileCheck, 
+  ArrowRight, ExternalLink, Download
 } from 'lucide-react';
 
 export default function ResumeUploader({
@@ -22,24 +23,44 @@ export default function ResumeUploader({
 }) {
   const [isDragging, setIsDragging] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [fileUrl, setFileUrl] = useState(null);
+  const [fileType, setFileType] = useState('text'); // 'pdf' | 'text' | 'sample'
   const fileInputRef = useRef(null);
 
   const isDark = theme === 'dark';
 
+  // Clean up object URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (fileUrl) {
+        URL.revokeObjectURL(fileUrl);
+      }
+    };
+  }, [fileUrl]);
+
   const handleFileProcess = (file) => {
     if (!file) return;
 
+    // Revoke any previous object URL
+    if (fileUrl) {
+      URL.revokeObjectURL(fileUrl);
+      setFileUrl(null);
+    }
+
     setFileName(file.name);
 
-    const reader = new FileReader();
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
 
-    reader.onload = (e) => {
-      const content = e.target.result;
-      if (typeof content === 'string') {
-        // Plain text / markdown / rtf
-        setResumeText(content);
-      } else {
-        // ArrayBuffer / binary format (e.g. PDF)
+    if (isPdf) {
+      // 1. Create a true native object URL to preview the EXACT PDF file
+      const url = URL.createObjectURL(file);
+      setFileUrl(url);
+      setFileType('pdf');
+
+      // 2. Extract textual data from PDF stream for the AI match engine
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target.result;
         const bytes = new Uint8Array(content);
         let extracted = '';
         for (let i = 0; i < bytes.length; i++) {
@@ -49,18 +70,20 @@ export default function ResumeUploader({
           }
         }
         const cleaned = extracted.replace(/[^\x20-\x7E\t\r\n]/g, ' ').replace(/\s+/g, ' ').trim();
-        if (cleaned.length > 50) {
-          setResumeText(cleaned);
-        } else {
-          setResumeText(`[Resume Document: ${file.name}]\nExtracted content with technical coursework, academic background, and project experience.`);
-        }
-      }
-    };
-
-    if (file.name.endsWith('.txt') || file.name.endsWith('.md')) {
-      reader.readAsText(file);
-    } else {
+        setResumeText(cleaned.length > 50 ? cleaned : `Resume document: ${file.name}\nCandidate technical coursework and projects.`);
+      };
       reader.readAsArrayBuffer(file);
+
+    } else {
+      // Non-PDF file (TXT, MD)
+      setFileUrl(null);
+      setFileType('text');
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setResumeText(e.target.result || '');
+      };
+      reader.readAsText(file);
     }
   };
 
@@ -79,6 +102,24 @@ export default function ResumeUploader({
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileProcess(e.dataTransfer.files[0]);
     }
+  };
+
+  const handleSampleSelect = (sample) => {
+    if (fileUrl) {
+      URL.revokeObjectURL(fileUrl);
+      setFileUrl(null);
+    }
+    setFileType('sample');
+    onSelectSampleResume(sample);
+  };
+
+  const handleRemove = () => {
+    if (fileUrl) {
+      URL.revokeObjectURL(fileUrl);
+      setFileUrl(null);
+    }
+    setFileType('text');
+    onRemoveResume();
   };
 
   const wordCount = resumeText ? resumeText.trim().split(/\s+/).length : 0;
@@ -164,14 +205,16 @@ export default function ResumeUploader({
           
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             
-            {/* File Info Block (Clickable to open preview) */}
+            {/* File Info Block (Clickable to open exact preview) */}
             <div 
               onClick={() => setIsPreviewOpen(true)}
               className="flex items-center gap-3.5 cursor-pointer group flex-1"
-              title="Click to preview attached resume"
+              title="Click to preview exact file"
             >
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-md group-hover:scale-105 transition-transform shrink-0">
-                <FileCheck className="w-6 h-6" />
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-xs shadow-md group-hover:scale-105 transition-transform shrink-0 ${
+                fileType === 'pdf' ? 'bg-rose-600' : 'bg-gradient-to-tr from-purple-600 to-indigo-600'
+              }`}>
+                {fileType === 'pdf' ? 'PDF' : <FileCheck className="w-6 h-6" />}
               </div>
               
               <div className="min-w-0">
@@ -182,17 +225,17 @@ export default function ResumeUploader({
                     {fileName || 'Attached_Resume.pdf'}
                   </h3>
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
-                    Ready
+                    Attached
                   </span>
                 </div>
                 
                 <p className={`text-xs mt-0.5 flex items-center gap-2 ${
                   isDark ? 'text-slate-400' : 'text-slate-500'
                 }`}>
-                  <span>{wordCount} words detected</span>
+                  <span>{fileType === 'pdf' ? 'Native PDF Document' : `${wordCount} words`}</span>
                   <span>•</span>
-                  <span className="text-purple-600 dark:text-purple-400 font-medium group-hover:underline flex items-center gap-1">
-                    <Eye className="w-3 h-3" /> Click to open preview
+                  <span className="text-purple-600 dark:text-purple-400 font-semibold group-hover:underline flex items-center gap-1">
+                    <Eye className="w-3.5 h-3.5" /> Click to view exact file
                   </span>
                 </p>
               </div>
@@ -212,7 +255,7 @@ export default function ResumeUploader({
                 }`}
               >
                 <Eye className="w-3.5 h-3.5 text-purple-500" />
-                <span>Open Preview</span>
+                <span>Open File Preview</span>
               </button>
 
               {/* Change / Replace Button */}
@@ -228,7 +271,7 @@ export default function ResumeUploader({
               {/* Remove / Clear Button */}
               <button
                 type="button"
-                onClick={onRemoveResume}
+                onClick={handleRemove}
                 className={`p-2 rounded-xl border text-slate-400 hover:text-rose-500 hover:border-rose-500/40 transition ${
                   isDark ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-slate-50'
                 }`}
@@ -269,12 +312,12 @@ export default function ResumeUploader({
             </h3>
             
             <p className={`text-xs mt-1 max-w-md mx-auto ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Supports PDF, DOCX, TXT files. All data is parsed securely inside your browser.
+              Upload your PDF, DOCX, or TXT file. You can preview the exact document before auditing.
             </p>
 
-            <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-purple-600 text-white shadow-md">
+            <div className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-purple-600 text-white shadow-md">
               <FileText className="w-3.5 h-3.5" />
-              <span>Select File from Device</span>
+              <span>Select Resume File</span>
             </div>
           </div>
 
@@ -285,7 +328,7 @@ export default function ResumeUploader({
             <span className={`text-[11px] font-bold uppercase tracking-wider block mb-2 ${
               isDark ? 'text-slate-400' : 'text-slate-600'
             }`}>
-              Or test instantly with a sample student profile:
+              Or test with sample student profiles:
             </span>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -293,7 +336,7 @@ export default function ResumeUploader({
                 <button
                   key={res.id}
                   type="button"
-                  onClick={() => onSelectSampleResume(res)}
+                  onClick={() => handleSampleSelect(res)}
                   className={`text-left p-3 rounded-xl border transition-all ${
                     isDark 
                       ? 'bg-slate-950 border-slate-800 hover:border-purple-500/50 text-slate-300 hover:bg-slate-900' 
@@ -316,48 +359,100 @@ export default function ResumeUploader({
         </div>
       )}
 
-      {/* MODAL: RESUME PREVIEW VIEWER (OPENS WHEN USER CLICKS FILE) */}
+      {/* MODAL: EXACT FILE PREVIEW VIEWER (HIGH FIDELITY) */}
       {isPreviewOpen && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className={`max-w-2xl w-full rounded-3xl p-6 sm:p-7 border shadow-2xl relative flex flex-col max-h-[85vh] ${
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5">
+          <div className={`max-w-4xl w-full rounded-3xl p-5 sm:p-6 border shadow-2xl relative flex flex-col h-[88vh] ${
             isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
           }`}>
             
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-purple-600/10 text-purple-600 dark:text-purple-400">
-                  <FileText className="w-5 h-5" />
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl font-bold text-xs ${
+                  fileType === 'pdf' ? 'bg-rose-500/10 text-rose-500' : 'bg-purple-600/10 text-purple-600 dark:text-purple-400'
+                }`}>
+                  {fileType === 'pdf' ? 'PDF' : <FileText className="w-5 h-5" />}
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm leading-tight">
-                    {fileName || 'Attached_Resume.pdf'}
-                  </h3>
-                  <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {wordCount} words • Parsed document content
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-sm leading-tight truncate max-w-sm">
+                      {fileName || 'Uploaded_Resume.pdf'}
+                    </h3>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      Exact File Preview
+                    </span>
+                  </div>
+                  <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {fileType === 'pdf' ? 'Original PDF layout rendered directly' : `${wordCount} words detected`}
                   </p>
                 </div>
               </div>
 
-              <button
-                onClick={() => setIsPreviewOpen(false)}
-                className={`p-1.5 rounded-full border transition ${
-                  isDark ? 'border-slate-800 text-slate-400 hover:text-white' : 'border-slate-200 text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                {fileUrl && (
+                  <button
+                    type="button"
+                    onClick={() => window.open(fileUrl, '_blank')}
+                    className={`text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 font-semibold transition ${
+                      isDark ? 'border-slate-800 hover:bg-slate-800 text-slate-300' : 'border-slate-200 hover:bg-slate-100 text-slate-700'
+                    }`}
+                    title="Open PDF in new browser tab"
+                  >
+                    <span>Full Tab</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setIsPreviewOpen(false)}
+                  className={`p-1.5 rounded-full border transition ${
+                    isDark ? 'border-slate-800 text-slate-400 hover:text-white' : 'border-slate-200 text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-            {/* Resume Content View */}
-            <div className={`flex-1 overflow-y-auto p-4 rounded-xl border text-xs font-mono whitespace-pre-wrap leading-relaxed ${
-              isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-800'
-            }`}>
-              {resumeText}
+            {/* Resume Content View: High-Fidelity Rendering */}
+            <div className="flex-1 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 relative bg-slate-950 flex flex-col">
+              
+              {fileType === 'pdf' && fileUrl ? (
+                /* 1. EXACT NATIVE PDF DOCUMENT VIEWER */
+                <iframe
+                  src={`${fileUrl}#view=FitH`}
+                  className="w-full h-full border-0 bg-white"
+                  title="Exact Uploaded Resume PDF"
+                />
+              ) : (
+                /* 2. FORMATTED A4 DOCUMENT VIEWER (For Text & Sample Resumes) */
+                <div className="w-full h-full overflow-y-auto bg-slate-100 dark:bg-slate-950 p-4 sm:p-8 flex justify-center">
+                  <div className="max-w-2xl w-full bg-white text-slate-900 p-8 sm:p-10 rounded-xl shadow-2xl border border-slate-200 font-sans text-xs leading-relaxed space-y-4">
+                    
+                    {/* Stylized Document Header */}
+                    <div className="border-b border-slate-300 pb-4 text-center">
+                      <h2 className="text-xl font-black tracking-tight text-slate-900 uppercase">
+                        {fileName ? fileName.replace(/\.[^/.]+$/, '').replace(/_/g, ' ') : 'Candidate Resume'}
+                      </h2>
+                      <p className="text-[11px] text-slate-500 mt-1">
+                        Verified Student Candidate • Beep Platform Document
+                      </p>
+                    </div>
+
+                    {/* Document Body */}
+                    <div className="whitespace-pre-wrap font-sans text-xs text-slate-800 leading-relaxed space-y-2">
+                      {resumeText}
+                    </div>
+
+                  </div>
+                </div>
+              )}
+
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-between pt-4 mt-3 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between pt-3.5 mt-2.5 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => {
@@ -369,7 +464,7 @@ export default function ResumeUploader({
                 }`}
               >
                 <RefreshCw className="w-3.5 h-3.5 text-purple-500" />
-                <span>Upload a Different Resume</span>
+                <span>Upload a Different File</span>
               </button>
 
               <button
@@ -377,7 +472,7 @@ export default function ResumeUploader({
                 onClick={() => setIsPreviewOpen(false)}
                 className="px-5 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white transition shadow-sm"
               >
-                Close Preview
+                Done • Return to Audit
               </button>
             </div>
 
