@@ -186,41 +186,43 @@ export default function LoginScreen({ onLogin, theme, toggleTheme }) {
       <header className={`border-b px-4 sm:px-8 py-3.5 flex items-center justify-between ${
         isDark ? 'border-slate-800/80 bg-slate-900/60' : 'border-slate-200 bg-white/80'
       } backdrop-blur-md`}>
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-500/20 text-white font-black text-xl">
-            B
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-400 bg-clip-text text-transparent">
-                Beep
-              </span>
-              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
-                isDark 
-                  ? 'bg-purple-500/15 border-purple-500/30 text-purple-300' 
-                  : 'bg-purple-50 border-purple-200 text-purple-700'
-              }`}>
-                Readiness Radar
-              </span>
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-500/20 text-white font-black text-xl">
+              B
             </div>
-            <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Founder’s Office Discovery MVP
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-400 bg-clip-text text-transparent">
+                  Beep
+                </span>
+                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+                  isDark 
+                    ? 'bg-purple-500/15 border-purple-500/30 text-purple-300' 
+                    : 'bg-purple-50 border-purple-200 text-purple-700'
+                }`}>
+                  Readiness Radar
+                </span>
+              </div>
+              <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Founder’s Office Discovery MVP
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Theme Toggle Button */}
-        <button
-          onClick={toggleTheme}
-          className={`p-2 rounded-xl border transition-all ${
-            isDark 
-              ? 'bg-slate-900 border-slate-800 text-amber-400 hover:bg-slate-800' 
-              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 shadow-sm'
-          }`}
-          title={isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
-        >
-          {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-        </button>
+          {/* Theme Toggle Button (shifted to the left) */}
+          <button
+            onClick={toggleTheme}
+            className={`p-2 rounded-xl border transition-all ${
+              isDark 
+                ? 'bg-slate-900 border-slate-800 text-amber-400 hover:bg-slate-800' 
+                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 shadow-sm'
+            }`}
+            title={isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+          >
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+        </div>
       </header>
 
       {/* Main Login Card Container */}

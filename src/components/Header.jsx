@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
-import { HelpCircle, Info, Sun, Moon, LogOut, Briefcase } from 'lucide-react';
+import { HelpCircle, Info, Sun, Moon, LogOut, Briefcase, BarChart3 } from 'lucide-react';
 
-export default function Header({ apiStatus, user, onLogout, theme, toggleTheme, applicationsCount = 0, onOpenApplications }) {
+export default function Header({ 
+  apiStatus, 
+  user, 
+  onLogout, 
+  theme, 
+  toggleTheme, 
+  applicationsCount = 0, 
+  onOpenApplications,
+  onOpenStats 
+}) {
   const [showInfo, setShowInfo] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -13,35 +22,66 @@ export default function Header({ apiStatus, user, onLogout, theme, toggleTheme, 
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
         
-        {/* Brand / Logo */}
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-500/20 text-white font-extrabold text-lg tracking-tight">
-            B
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className={`font-extrabold text-lg tracking-tight ${
-                isDark ? 'text-white' : 'text-slate-900'
-              }`}>
-                Beep
-              </span>
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                isDark
-                  ? 'bg-purple-500/15 border-purple-500/30 text-purple-300'
-                  : 'bg-purple-50 border-purple-200 text-purple-700'
-              }`}>
-                Readiness Radar
-              </span>
+        {/* Left Side: Brand Logo + Theme Toggle shifted to the left */}
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-500/20 text-white font-extrabold text-lg tracking-tight">
+              B
             </div>
-            <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Founder’s Office Discovery MVP
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className={`font-extrabold text-lg tracking-tight ${
+                  isDark ? 'text-white' : 'text-slate-900'
+                }`}>
+                  Beep
+                </span>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                  isDark
+                    ? 'bg-purple-500/15 border-purple-500/30 text-purple-300'
+                    : 'bg-purple-50 border-purple-200 text-purple-700'
+                }`}>
+                  Readiness Radar
+                </span>
+              </div>
+              <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Founder’s Office Discovery MVP
+              </p>
+            </div>
           </div>
+
+          {/* Theme Toggle Button (shifted to the left beside the logo) */}
+          <button
+            onClick={toggleTheme}
+            className={`p-2 rounded-xl border transition-all ${
+              isDark 
+                ? 'bg-slate-900 border-slate-800 text-amber-400 hover:bg-slate-800' 
+                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 shadow-sm'
+            }`}
+            title={isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+          >
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
         </div>
 
-        {/* Right Actions: Applications Tracker, Theme Toggle, Engine Status, User Profile */}
+        {/* Right Actions: Placement Stats, Applications Tracker, Engine Status, User Profile */}
         <div className="flex items-center gap-2 sm:gap-2.5">
           
+          {/* Placement Stats Button */}
+          {onOpenStats && (
+            <button
+              onClick={onOpenStats}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${
+                isDark
+                  ? 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-300'
+                  : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700 shadow-sm'
+              }`}
+              title="View Campus Placement & ATS Screening Statistics"
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-purple-500" />
+              <span className="hidden md:inline">Statistics</span>
+            </button>
+          )}
+
           {/* Applications Tracker Pill */}
           {user && (
             <button
@@ -62,19 +102,6 @@ export default function Header({ apiStatus, user, onLogout, theme, toggleTheme, 
               )}
             </button>
           )}
-
-          {/* Theme Toggle Button */}
-          <button
-            onClick={toggleTheme}
-            className={`p-2 rounded-xl border transition-all ${
-              isDark 
-                ? 'bg-slate-900 border-slate-800 text-amber-400 hover:bg-slate-800' 
-                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 shadow-sm'
-            }`}
-            title={isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
-          >
-            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
 
           {/* Engine Status Indicator */}
           <div 

@@ -7,6 +7,7 @@ import ResumeUploader from './components/ResumeUploader';
 import ResultsView from './components/ResultsView';
 import ApplicationModal from './components/ApplicationModal';
 import ApplicationTrackerModal from './components/ApplicationTrackerModal';
+import StatisticsModal from './components/StatisticsModal';
 import { INTERNSHIPS } from './data/sampleRoles';
 import { runDynamicHeuristicAnalysis } from './utils/heuristicCore';
 import { AlertTriangle, Sparkles, ArrowRight, RefreshCw } from 'lucide-react';
@@ -37,6 +38,9 @@ export default function App() {
       return [];
     }
   });
+
+  // Statistics Modal state
+  const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
 
   const [apiStatus, setApiStatus] = useState({
     aiEnabled: false,
@@ -273,11 +277,12 @@ export default function App() {
         toggleTheme={toggleTheme}
         applicationsCount={applications.length}
         onOpenApplications={() => setIsApplicationsOpen(true)}
+        onOpenStats={() => setIsStatsModalOpen(true)}
       />
 
       {/* Main Content Area */}
       <main className="flex-1">
-        <Hero theme={theme} />
+        <Hero theme={theme} onOpenStats={() => setIsStatsModalOpen(true)} />
 
         {/* Error Banner */}
         {errorMessage && (
@@ -376,6 +381,13 @@ export default function App() {
         isOpen={isApplicationsOpen}
         onClose={() => setIsApplicationsOpen(false)}
         applications={applications}
+        theme={theme}
+      />
+
+      {/* Campus Placement & Hiring Statistics Modal */}
+      <StatisticsModal
+        isOpen={isStatsModalOpen}
+        onClose={() => setIsStatsModalOpen(false)}
         theme={theme}
       />
 
