@@ -3,10 +3,26 @@ import Header from './components/Header';
 import Hero from './components/Hero';
 import InputSection from './components/InputSection';
 import ResultsView from './components/ResultsView';
+import LoginScreen from './components/LoginScreen';
 import { SAMPLE_ROLES } from './data/sampleRoles';
-import { AlertTriangle, Sparkles } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
 export default function App() {
+  // Theme state: persists dark/light mode
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('beep_theme') || 'dark';
+  });
+
+  // User state: persists logged-in user profile
+  const [user, setUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('beep_user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const [apiStatus, setApiStatus] = useState({
     aiEnabled: false,
     engine: 'Checking engine...',
@@ -22,6 +38,32 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Sync theme with document class for Tailwind styling
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('beep_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
+  const handleLogin = (userData) => {
+    setUser(userData);
+    localStorage.setItem('beep_user', JSON.stringify(userData));
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('beep_user');
+    setResult(null);
+  };
+
   // Check backend engine status on load
   useEffect(() => {
     fetch('/api/status')
@@ -31,7 +73,7 @@ export default function App() {
         console.warn('Backend not responding to /api/status, using client simulation mode:', err);
         setApiStatus({
           aiEnabled: false,
-          engine: 'Demo Mode (Client-side simulation)',
+          engine: 'Demo Mode (Client simulation)',
           message: 'Backend server not detected. Running high-fidelity local simulation.'
         });
       });
@@ -82,12 +124,9 @@ export default function App() {
       const data = await response.json();
       setResult(data);
 
-      // Smooth scroll to results
       setTimeout(() => {
         const el = document.getElementById('results-section');
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
-        }
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     } catch (err) {
       console.error('API call failed, running local demo fallback:', err);
@@ -176,19 +215,41 @@ export default function App() {
     }
   };
 
+  const isDark = theme === 'dark';
+
+  // If user is not logged in, show the LoginScreen
+  if (!user) {
+    return (
+      <LoginScreen
+        onLogin={handleLogin}
+        theme={theme}
+        toggleTheme={toggleTheme}
+      />
+    );
+  }
+
+  // Once logged in, show the main application dashboard
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 selection:bg-purple-500 selection:text-white">
+    <div className={`min-h-screen flex flex-col transition-colors duration-200 ${
+      isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+    }`}>
       {/* Top Navigation */}
-      <Header apiStatus={apiStatus} />
+      <Header
+        apiStatus={apiStatus}
+        user={user}
+        onLogout={handleLogout}
+        theme={theme}
+        toggleTheme={toggleTheme}
+      />
 
       {/* Main Container */}
       <main className="flex-1">
-        <Hero />
+        <Hero theme={theme} />
 
         {/* Error Banner */}
         {errorMessage && (
           <div className="max-w-4xl mx-auto px-4 mt-4">
-            <div className="p-3.5 rounded-xl bg-rose-950/50 border border-rose-500/50 text-rose-300 text-xs flex items-center gap-2">
+            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/40 text-rose-500 text-xs flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
@@ -208,12 +269,14 @@ export default function App() {
           selectedPresetId={selectedPresetId}
           onSelectPreset={handleSelectPreset}
           onReset={handleReset}
+          theme={theme}
         />
 
         {/* Detailed Results Section */}
         {result && (
           <ResultsView
             result={result}
+            theme={theme}
             onNewAudit={() => {
               setResult(null);
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -223,12 +286,14 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950/80 py-8 text-center text-xs text-slate-500">
+      <footer className={`border-t py-8 text-center text-xs transition-colors duration-200 ${
+        isDark ? 'border-slate-900 bg-slate-950/80 text-slate-500' : 'border-slate-200 bg-white text-slate-400'
+      }`}>
         <div className="max-w-5xl mx-auto px-4 space-y-2">
-          <p className="font-semibold text-slate-400">
+          <p className={`font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             Beep Internship Readiness Radar • Built for the Founder’s Office Assignment
           </p>
-          <p className="text-[11px] text-slate-600">
+          <p className={`text-[11px] ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
             Designed to bridge the student Actionability Gap with transparent skill diagnostics and weekend proof-of-work plans.
           </p>
         </div>
