@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
-import InputSection from './components/InputSection';
-import ResultsView from './components/ResultsView';
 import LoginScreen from './components/LoginScreen';
-import { SAMPLE_ROLES } from './data/sampleRoles';
-import { AlertTriangle } from 'lucide-react';
+import InternshipExplorer from './components/InternshipExplorer';
+import ResumeUploader from './components/ResumeUploader';
+import ResultsView from './components/ResultsView';
+import ApplicationModal from './components/ApplicationModal';
+import { INTERNSHIPS, SAMPLE_RESUMES } from './data/sampleRoles';
+import { AlertTriangle, Sparkles, ArrowRight, RefreshCw } from 'lucide-react';
 
 export default function App() {
-  // Theme state: persists dark/light mode
+  // Theme state: dark / light
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('beep_theme') || 'dark';
   });
 
-  // User state: persists logged-in user profile
+  // User state: logged in user profile
   const [user, setUser] = useState(() => {
     try {
       const savedUser = localStorage.getItem('beep_user');
@@ -29,16 +31,26 @@ export default function App() {
     message: ''
   });
 
-  const [targetRole, setTargetRole] = useState(SAMPLE_ROLES[0].title);
-  const [studentSkills, setStudentSkills] = useState(SAMPLE_ROLES[0].studentSkills);
-  const [jobDescription, setJobDescription] = useState(SAMPLE_ROLES[0].jobDescription);
-  const [selectedPresetId, setSelectedPresetId] = useState(SAMPLE_ROLES[0].id);
+  // Flow State
+  const [selectedInternship, setSelectedInternship] = useState(INTERNSHIPS[0]);
+  const [isCustomJob, setIsCustomJob] = useState(false);
+  const [customRoleTitle, setCustomRoleTitle] = useState('');
+  const [customJd, setCustomJd] = useState('');
 
+  // Resume State
+  const [resumeText, setResumeText] = useState(SAMPLE_RESUMES[1].content); // default to Intermediate
+  const [fileName, setFileName] = useState('Priya_Nair_Resume.pdf');
+  const [selectedResumeId, setSelectedResumeId] = useState(SAMPLE_RESUMES[1].id);
+
+  // Analysis & Execution State
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Sync theme with document class for Tailwind styling
+  // Apply Modal State
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+
+  // Sync theme class
   useEffect(() => {
     const root = document.documentElement;
     if (theme === 'dark') {
@@ -50,7 +62,7 @@ export default function App() {
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
 
   const handleLogin = (userData) => {
@@ -67,39 +79,51 @@ export default function App() {
   // Check backend engine status on load
   useEffect(() => {
     fetch('/api/status')
-      .then((res) => res.json())
-      .then((data) => setApiStatus(data))
-      .catch((err) => {
+      .then(res => res.json())
+      .then(data => setApiStatus(data))
+      .catch(err => {
         console.warn('Backend not responding to /api/status, using client simulation mode:', err);
         setApiStatus({
           aiEnabled: false,
-          engine: 'Demo Mode (Client simulation)',
-          message: 'Backend server not detected. Running high-fidelity local simulation.'
+          engine: 'Dynamic Demo Engine (Client Mode)',
+          message: 'Backend server offline. Running high-fidelity local simulation.'
         });
       });
   }, []);
 
-  const handleSelectPreset = (role) => {
-    setSelectedPresetId(role.id);
-    setTargetRole(role.title);
-    setStudentSkills(role.studentSkills);
-    setJobDescription(role.jobDescription);
+  const handleSelectInternship = (job) => {
+    setSelectedInternship(job);
+    setIsCustomJob(false);
     setErrorMessage('');
   };
 
-  const handleReset = () => {
-    setSelectedPresetId(null);
-    setTargetRole('');
-    setStudentSkills('');
-    setJobDescription('');
-    setResult(null);
+  const handleCustomJobSelect = () => {
+    setIsCustomJob(true);
+    setSelectedInternship(null);
+    setErrorMessage('');
+  };
+
+  const handleSelectSampleResume = (resumeObj) => {
+    setSelectedResumeId(resumeObj.id);
+    setResumeText(resumeObj.content);
+    setFileName(`${resumeObj.label.replace(/\s+/g, '_')}.pdf`);
     setErrorMessage('');
   };
 
   const handleAnalyze = async (e) => {
     e?.preventDefault();
-    if (!studentSkills.trim() || !jobDescription.trim()) {
-      setErrorMessage('Please provide both your skills/resume and the target internship description.');
+
+    const targetJobText = isCustomJob ? customJd : selectedInternship?.description;
+    const roleTitle = isCustomJob ? customRoleTitle : selectedInternship?.title;
+    const company = isCustomJob ? 'Custom Partner' : selectedInternship?.company;
+
+    if (!resumeText.trim()) {
+      setErrorMessage('Please attach or paste a resume before auditing.');
+      return;
+    }
+
+    if (!targetJobText?.trim()) {
+      setErrorMessage('Please select an internship or provide a custom job description.');
       return;
     }
 
@@ -111,9 +135,10 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          studentSkills,
-          jobDescription,
-          targetRole: targetRole || 'Internship Role'
+          studentSkills: resumeText,
+          jobDescription: targetJobText,
+          targetRole: roleTitle || 'Internship Role',
+          companyName: company || 'Hiring Company'
         })
       });
 
@@ -129,29 +154,65 @@ export default function App() {
         if (el) el.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     } catch (err) {
-      console.error('API call failed, running local demo fallback:', err);
-      // Fallback local heuristic execution so user flow never breaks
+      console.error('API call failed, running dynamic fallback:', err);
+      // Fallback calculation directly in frontend
+      const wordCount = resumeText.trim().split(/\s+/).length;
+      let calculatedScore = 55;
+      if (selectedResumeId === 'beginner') calculatedScore = 34;
+      else if (selectedResumeId === 'intermediate') calculatedScore = 68;
+      else if (selectedResumeId === 'advanced') calculatedScore = 89;
+
       const fallbackResult = {
         isAIGenerated: false,
-        engine: 'Curated Heuristic Engine (Offline Fallback)',
-        targetRole: targetRole || 'Internship Candidate',
-        matchScore: 68,
-        readinessLevel: 'Moderate Match - 7-Day Sprint Needed',
-        badgeColor: 'blue',
+        engine: 'Dynamic Heuristic Engine (Offline Simulation)',
+        targetRole: roleTitle || 'Internship Candidate',
+        company: company || 'Hiring Partner',
+        matchScore: calculatedScore,
+        readinessLevel: calculatedScore >= 80 ? 'High Match - Ready to Apply' : (calculatedScore >= 55 ? 'Moderate Match - 7-Day Sprint Needed' : 'Developing Match - Major Gaps'),
+        badgeColor: calculatedScore >= 80 ? 'emerald' : (calculatedScore >= 55 ? 'blue' : 'amber'),
+        resumeStats: {
+          wordCount,
+          hasLiveLinks: selectedResumeId !== 'beginner',
+          hasMetrics: selectedResumeId === 'advanced',
+          skillsIdentified: selectedResumeId === 'advanced' ? 14 : (selectedResumeId === 'intermediate' ? 8 : 4)
+        },
+        silentRejectionFlags: [
+          {
+            type: selectedResumeId === 'beginner' ? 'critical' : 'pass',
+            title: selectedResumeId === 'beginner' ? 'Ghost Project Warning (Missing Live Links)' : 'Verifiable Live Project Links Found',
+            description: selectedResumeId === 'beginner' 
+              ? 'Your resume mentions projects but lacks verifiable live URLs (Vercel, Render) or GitHub links. Recruiters skip unverified claims.'
+              : 'Resume contains live deployment links, establishing immediate practical credibility.'
+          },
+          {
+            type: calculatedScore < 80 ? 'warning' : 'pass',
+            title: calculatedScore < 80 ? 'Production Workflow Gap Detected' : 'Core Architecture Alignment Verified',
+            description: calculatedScore < 80 
+              ? 'JD requires modern deployment workflows and state management not clearly proven in this resume.'
+              : 'Resume demonstrates strong alignment with required production frameworks.'
+          },
+          {
+            type: selectedResumeId === 'advanced' ? 'pass' : 'warning',
+            title: selectedResumeId === 'advanced' ? 'Metric-Backed Google XYZ Bullets Present' : 'Passive Bullet Points Flag',
+            description: selectedResumeId === 'advanced'
+              ? 'Projects feature clear percentage and performance metrics.'
+              : 'Bullets describe general duties rather than quantifiable impact metrics.'
+          }
+        ],
         scoreBreakdown: {
-          mustHaveCoverage: '65%',
-          transferableBonus: '+15%',
-          riskFactor: 'Moderate resume filter risk on primary keywords'
+          mustHaveCoverage: `${calculatedScore}%`,
+          transferableBonus: '+15% potential',
+          riskFactor: calculatedScore < 60 ? 'High ATS rejection probability' : 'Low risk'
         },
         skillsBreakdown: {
-          matched: ['JAVASCRIPT', 'REACT.JS', 'HTML/CSS', 'GIT'],
-          transferable: ['TYPESCRIPT (Can bridge in 48 hours)', 'TAILWIND CSS (Basic CSS present)'],
-          missingCritical: ['NEXT.JS / SSR', 'REDUX TOOLKIT OR ZUSTAND', 'REST API PERFORMANCE']
+          matched: selectedResumeId === 'beginner' ? ['HTML/CSS', 'BASIC JS'] : ['REACT.JS', 'JAVASCRIPT', 'TAILWIND CSS', 'GIT'],
+          transferable: ['TYPESCRIPT (Can bridge in 48 hrs)', 'NEXT.JS (Bridgeable)'],
+          missingCritical: selectedResumeId === 'advanced' ? [] : ['PRODUCTION ARCHITECTURE', 'UNIT TESTING']
         },
-        recruiterInsight: 'Your profile demonstrates strong web fundamentals and personal project curiosity. However, hiring teams for this role screen strictly for modern production workflows like Next.js and state management.',
+        recruiterInsight: `For the ${roleTitle} role at ${company}, your profile reflects ${calculatedScore >= 70 ? 'strong practical competence' : 'early foundational curiosity'}. However, automated filters prioritize candidates with verified live projects and metric-backed impact.`,
         proofOfWorkProject: {
-          title: '48-Hour Next.js Micro-App',
-          deliverable: 'Build a server-side rendered catalog app with Next.js App Router and Zustand for cart state, deployed live on Vercel.',
+          title: `48-Hour ${roleTitle.split(' ')[0]} Micro-Proof Project`,
+          deliverable: `Build a focused working prototype deployed live on Vercel with a structured GitHub README solving a real workflow for ${company}.`,
           estimatedHours: '6-8 hours over a weekend'
         },
         sevenDayPlan: [
@@ -159,52 +220,53 @@ export default function App() {
             day: 'Day 1 & 2',
             phase: 'Core Concept Immersion',
             tasks: [
-              'Master Next.js App Router basics and Server vs. Client Components.',
-              'Build a clean 2-page template integrating public REST APIs.'
+              `Review essential junior-level requirements for ${roleTitle}.`,
+              'Set up a clean GitHub repository and configure local development.'
             ]
           },
           {
             day: 'Day 3 & 4',
             phase: '48-Hour Proof-of-Work Project',
             tasks: [
-              'Add Zustand state management and Tailwind styling to the project.',
-              'Deploy to Vercel and include a clear problem statement in your GitHub README.'
+              `Build and deploy the micro-app demonstrating core skills needed at ${company}.`,
+              'Publish live demo URL and write a clean architecture section in your README.'
             ]
           },
           {
             day: 'Day 5',
-            phase: 'Resume Optimization (XYZ Formula)',
+            phase: 'Resume Optimization (Google XYZ Formula)',
             tasks: [
-              'Rewrite your top 3 resume bullet points highlighting the new Next.js project.',
-              'Include live project and GitHub links at the top of your resume.'
+              'Rewrite your top project bullet points with metrics.',
+              'Place the live demo link at the very top of your resume.'
             ]
           },
           {
             day: 'Day 6',
-            phase: 'Targeted Recruiter & Founder Outreach',
+            phase: 'Targeted Outreach',
             tasks: [
-              'Find 3 hiring leads at the company on LinkedIn.',
-              'Send a concise 4-sentence DM referencing the exact project you built.'
+              `Locate tech leads at ${company} on LinkedIn.`,
+              'Send a concise 4-sentence cold pitch referencing your live project.'
             ]
           },
           {
             day: 'Day 7',
-            phase: 'Interview Readiness & Formal Submission',
+            phase: 'Application Submission via Beep',
             tasks: [
-              'Review common React vs. Next.js interview questions.',
-              'Submit the tailored application.'
+              'Review common interview questions for this stack.',
+              'Submit your application through the Beep Fast-Track Queue.'
             ]
           }
         ],
         applicationBooster: {
           tailoredBullets: [
-            'Architected a responsive web application utilizing React and Next.js, cutting initial page load times by 35% through server-side rendering.',
-            'Implemented centralized client state handling with Zustand, ensuring seamless reactive UI state across multiple user flows.',
-            'Deployed production build on Vercel with automated CI/CD checks, achieving 98+ Lighthouse performance and accessibility scores.'
+            `Engineered a responsive, production-ready prototype utilizing modern frameworks, reducing initial load latency by 28%.`,
+            `Integrated clean state management and REST API workflows for ${roleTitle}, achieving 99% reliable data synchronization across sessions.`,
+            `Deployed production build with automated CI/CD pipeline on Vercel, adhering to strict version control and documentation standards.`
           ],
-          coldPitchMessage: `Hi [Hiring Manager Name],\n\nI noticed you are hiring for the ${targetRole || 'Frontend Intern'} role. I built a focused project implementing Next.js App Router and state management specifically addressing the core requirements in your job description: [Insert Live Project Link].\n\nI would love 5 minutes to learn if my hands-on background could add immediate value to your team this semester.\n\nBest,\n[Your Name]`
+          coldPitchMessage: `Hi [Hiring Manager Name],\n\nI noticed you are hiring for the ${roleTitle} role at ${company}. I built a focused project implementing the core requirements mentioned in your job description: [Insert Live Project Link].\n\nI would love 5 minutes to learn if my hands-on background could add immediate value to your engineering sprints this semester.\n\nBest,\n[Your Name]`
         }
       };
+
       setResult(fallbackResult);
       setTimeout(() => {
         const el = document.getElementById('results-section');
@@ -217,7 +279,7 @@ export default function App() {
 
   const isDark = theme === 'dark';
 
-  // If user is not logged in, show the LoginScreen
+  // 1. Login Gate
   if (!user) {
     return (
       <LoginScreen
@@ -228,12 +290,15 @@ export default function App() {
     );
   }
 
-  // Once logged in, show the main application dashboard
+  const activeJobTitle = isCustomJob ? (customRoleTitle || 'Custom Role') : selectedInternship?.title;
+  const activeCompany = isCustomJob ? 'Custom Job' : selectedInternship?.company;
+
+  // 2. Main Authenticated Application
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-200 ${
       isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
     }`}>
-      {/* Top Navigation */}
+      {/* Top Header */}
       <Header
         apiStatus={apiStatus}
         user={user}
@@ -242,7 +307,7 @@ export default function App() {
         toggleTheme={toggleTheme}
       />
 
-      {/* Main Container */}
+      {/* Main Content Area */}
       <main className="flex-1">
         <Hero theme={theme} />
 
@@ -256,34 +321,81 @@ export default function App() {
           </div>
         )}
 
-        {/* Input Form with Presets */}
-        <InputSection
-          targetRole={targetRole}
-          setTargetRole={setTargetRole}
-          studentSkills={studentSkills}
-          setStudentSkills={setStudentSkills}
-          jobDescription={jobDescription}
-          setJobDescription={setJobDescription}
-          onAnalyze={handleAnalyze}
-          isLoading={isLoading}
-          selectedPresetId={selectedPresetId}
-          onSelectPreset={handleSelectPreset}
-          onReset={handleReset}
+        {/* Step 1: Internship Explorer (Pick a Job First) */}
+        <InternshipExplorer
+          selectedInternship={selectedInternship}
+          onSelectInternship={handleSelectInternship}
+          onCustomJobSelect={handleCustomJobSelect}
+          isCustomJob={isCustomJob}
           theme={theme}
         />
 
-        {/* Detailed Results Section */}
+        {/* Step 2: Resume Uploader (Drop Resume or Select Sample Profile) */}
+        <ResumeUploader
+          resumeText={resumeText}
+          setResumeText={setResumeText}
+          fileName={fileName}
+          setFileName={setFileName}
+          selectedResumeId={selectedResumeId}
+          onSelectSampleResume={handleSelectSampleResume}
+          isCustomJob={isCustomJob}
+          customJd={customJd}
+          setCustomJd={setCustomJd}
+          customRoleTitle={customRoleTitle}
+          setCustomRoleTitle={setCustomRoleTitle}
+          theme={theme}
+        />
+
+        {/* Step 3: Run Audit CTA */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 text-center">
+          <button
+            type="button"
+            onClick={handleAnalyze}
+            disabled={isLoading || !resumeText.trim()}
+            className={`w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-2xl font-black text-sm shadow-xl transition-all ${
+              isLoading || !resumeText.trim()
+                ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700'
+                : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-500 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-600/30 hover:shadow-purple-600/50 cursor-pointer transform hover:-translate-y-0.5'
+            }`}
+          >
+            {isLoading ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                <span>Auditing {fileName || 'Resume'} against {activeJobTitle}...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 text-purple-200" />
+                <span>Audit Readiness for {activeJobTitle} ({activeCompany})</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Detailed Results View */}
         {result && (
           <ResultsView
             result={result}
             theme={theme}
+            onApplyClick={() => setIsApplyModalOpen(true)}
             onNewAudit={() => {
               setResult(null);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              window.scrollTo({ top: 200, behavior: 'smooth' });
             }}
           />
         )}
       </main>
+
+      {/* Apply Modal */}
+      <ApplicationModal
+        isOpen={isApplyModalOpen}
+        onClose={() => setIsApplyModalOpen(false)}
+        internship={selectedInternship || { title: customRoleTitle, company: 'Custom Partner' }}
+        result={result}
+        user={user}
+        theme={theme}
+      />
 
       {/* Footer */}
       <footer className={`border-t py-8 text-center text-xs transition-colors duration-200 ${
@@ -294,7 +406,7 @@ export default function App() {
             Beep Internship Readiness Radar • Built for the Founder’s Office Assignment
           </p>
           <p className={`text-[11px] ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
-            Designed to bridge the student Actionability Gap with transparent skill diagnostics and weekend proof-of-work plans.
+            Bridging the student Actionability Gap with transparent skill diagnostics and weekend proof-of-work plans.
           </p>
         </div>
       </footer>

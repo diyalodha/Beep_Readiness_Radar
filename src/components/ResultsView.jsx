@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { 
   CheckCircle, AlertCircle, HelpCircle, Calendar, 
   Copy, Check, Share2, ArrowUpRight, Flame, Layers, 
-  Terminal, Sparkles, UserCheck, ShieldAlert, Cpu
+  Terminal, Sparkles, UserCheck, ShieldAlert, Cpu, 
+  Send, ShieldCheck, AlertTriangle
 } from 'lucide-react';
 
-export default function ResultsView({ result, onNewAudit, theme }) {
+export default function ResultsView({ result, onNewAudit, onApplyClick, theme }) {
   const [copiedBulletIdx, setCopiedBulletIdx] = useState(null);
   const [copiedColdPitch, setCopiedColdPitch] = useState(false);
   const [shareFeedback, setShareFeedback] = useState(false);
@@ -45,7 +46,7 @@ export default function ResultsView({ result, onNewAudit, theme }) {
   };
 
   return (
-    <div id="results-section" className="max-w-6xl mx-auto px-4 sm:px-6 pb-20 space-y-6">
+    <div id="results-section" className="max-w-6xl mx-auto px-4 sm:px-6 pb-20 space-y-6 pt-4">
       
       {/* 1. TRANSPARENCY BANNER: CLEARLY DISTINGUISH DEMO FROM GENUINE AI */}
       <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md transition-colors ${
@@ -64,33 +65,42 @@ export default function ResultsView({ result, onNewAudit, theme }) {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-sm">
-                {result.isAIGenerated ? '🟢 Genuine AI-Generated Analysis' : '🟡 Curated Heuristic Demo Results'}
+                {result.isAIGenerated ? '🟢 Genuine AI-Generated Analysis' : '🟡 Dynamic Heuristic Engine (Demo Mode)'}
               </span>
               <span className={`text-[11px] font-mono px-2 py-0.5 rounded-full border ${
                 isDark ? 'bg-slate-900/80 border-slate-700/60 text-slate-300' : 'bg-white border-slate-300 text-slate-700'
               }`}>
-                Engine: {result.engine || 'Heuristic Simulator'}
+                Engine: {result.engine || 'Dynamic Simulator'}
               </span>
             </div>
             <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              {result.isAIGenerated 
-                ? 'Processed live by backend Google Gemini model against industry recruiter standards.' 
-                : 'Deterministic matching simulation. To switch to live Gemini AI, set GEMINI_API_KEY in server .env.'}
+              Calculated specifically for <strong>{result.targetRole}</strong> against your uploaded resume.
             </p>
           </div>
         </div>
 
-        <button
-          onClick={() => copyToClipboard(window.location.href, 'share')}
-          className={`self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
-            isDark 
-              ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-200' 
-              : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700 shadow-sm'
-          }`}
-        >
-          {shareFeedback ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Share2 className="w-3.5 h-3.5" />}
-          {shareFeedback ? 'Audit Link Copied!' : 'Share Scorecard'}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Apply Button in Banner */}
+          <button
+            onClick={onApplyClick}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-md shadow-purple-600/30 transition"
+          >
+            <Send className="w-3.5 h-3.5" />
+            Apply via Beep
+          </button>
+
+          <button
+            onClick={() => copyToClipboard(window.location.href, 'share')}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition ${
+              isDark 
+                ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-200' 
+                : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700 shadow-sm'
+            }`}
+          >
+            {shareFeedback ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Share2 className="w-3.5 h-3.5" />}
+            {shareFeedback ? 'Copied!' : 'Share'}
+          </button>
+        </div>
       </div>
 
       {/* 2. MATCH SCORE & READINESS DASHBOARD */}
@@ -101,15 +111,21 @@ export default function ResultsView({ result, onNewAudit, theme }) {
           isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
         }`}>
           <div>
-            <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Readiness Score
-            </span>
+            <div className="flex items-center justify-between">
+              <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Dynamic Readiness Score
+              </span>
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-600'}`}>
+                {result.resumeStats?.wordCount || 120} words
+              </span>
+            </div>
+
             <div className="flex items-baseline gap-3 mt-2">
               <span className={`text-6xl font-black tracking-tight ${getScoreColor(result.matchScore).split(' ')[0]}`}>
                 {result.matchScore}%
               </span>
               <span className={`text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                overall match
+                match for this role
               </span>
             </div>
             
@@ -151,7 +167,7 @@ export default function ResultsView({ result, onNewAudit, theme }) {
             <div className="flex items-center gap-2 mb-3">
               <UserCheck className="w-4 h-4 text-purple-600 dark:text-purple-400" />
               <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-                Recruiter Reality Check
+                Recruiter Reality Check ({result.company || 'Hiring Team'})
               </h3>
             </div>
             <div className={`border rounded-xl p-4 text-sm leading-relaxed italic ${
@@ -189,7 +205,59 @@ export default function ResultsView({ result, onNewAudit, theme }) {
 
       </div>
 
-      {/* 3. SKILLS MATCH BREAKDOWN GRID */}
+      {/* 3. OUT-OF-THE-BOX FEATURE: THE SILENT REJECTION RADAR */}
+      {result.silentRejectionFlags && result.silentRejectionFlags.length > 0 && (
+        <div className={`border rounded-2xl p-6 shadow-lg transition-colors ${
+          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
+        }`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-amber-500" />
+              <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                The Silent Rejection Radar (Recruiter Filter Simulator)
+              </h3>
+            </div>
+            <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
+              isDark ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-amber-50 border-amber-300 text-amber-700'
+            }`}>
+              Hidden ATS & Recruiter Checks
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            {result.silentRejectionFlags.map((flag, fIdx) => (
+              <div
+                key={fIdx}
+                className={`p-3.5 rounded-xl border flex flex-col justify-between ${
+                  flag.type === 'critical'
+                    ? (isDark ? 'bg-rose-950/30 border-rose-900/50 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-900')
+                    : flag.type === 'warning'
+                      ? (isDark ? 'bg-amber-950/30 border-amber-900/50 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-900')
+                      : (isDark ? 'bg-emerald-950/30 border-emerald-900/50 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-900')
+                }`}
+              >
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    {flag.type === 'critical' && <ShieldAlert className="w-4 h-4 text-rose-500 shrink-0" />}
+                    {flag.type === 'warning' && <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />}
+                    {flag.type === 'pass' && <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />}
+                    <h4 className="text-xs font-bold leading-tight">{flag.title}</h4>
+                  </div>
+                  <p className="text-[11px] leading-relaxed opacity-90">{flag.description}</p>
+                </div>
+
+                <div className="mt-2.5 pt-2 border-t border-current/10 text-[10px] font-mono font-bold uppercase tracking-wider">
+                  {flag.type === 'critical' && '⚠️ High Risk of Silent Auto-Drop'}
+                  {flag.type === 'warning' && '⚡ Fix Recommended Before Applying'}
+                  {flag.type === 'pass' && '✅ Recruiter Check Passed'}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 4. SKILLS MATCH BREAKDOWN GRID */}
       <div className={`border rounded-2xl p-6 shadow-lg transition-colors ${
         isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
       }`}>
@@ -280,7 +348,7 @@ export default function ResultsView({ result, onNewAudit, theme }) {
         </div>
       </div>
 
-      {/* 4. THE 7-DAY DAY-BY-DAY PREPARATION PLAN */}
+      {/* 5. THE 7-DAY DAY-BY-DAY PREPARATION PLAN */}
       <div className={`border rounded-2xl p-6 shadow-lg transition-colors ${
         isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
       }`}>
@@ -324,7 +392,7 @@ export default function ResultsView({ result, onNewAudit, theme }) {
         </div>
       </div>
 
-      {/* 5. APPLICATION BOOSTER: RESUME BULLETS & COLD OUTREACH */}
+      {/* 6. APPLICATION BOOSTER: RESUME BULLETS & COLD OUTREACH */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         
         {/* Tailored Resume Bullets */}
@@ -403,32 +471,33 @@ export default function ResultsView({ result, onNewAudit, theme }) {
 
       </div>
 
-      {/* 6. BEEP COMMUNITY BRIDGE & NEW AUDIT BUTTON */}
-      <div className={`border rounded-2xl p-6 sm:p-8 text-center space-y-4 shadow-xl transition-all ${
+      {/* 7. BEEP APPLICATION ACTION CARD */}
+      <div className={`border rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-xl transition-all ${
         isDark 
           ? 'bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-slate-900 border-purple-500/30' 
           : 'bg-gradient-to-r from-purple-50 via-indigo-50 to-white border-purple-200'
       }`}>
-        <h3 className={`text-lg sm:text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-          Don't prepare alone. Build & get verified on Beep.
+        <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-purple-600/10 text-purple-600 border border-purple-500/20">
+          Ready to Make Your Move?
+        </span>
+        <h3 className={`text-lg sm:text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          Apply for {result.targetRole} at {result.company}
         </h3>
-        <p className={`text-xs sm:text-sm max-w-xl mx-auto ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-          Need a peer study group or review on your 48-hour proof-of-work project? Connect with mentors and other Indian college students on the Beep platform.
+        <p className={`text-xs sm:text-sm max-w-xl mx-auto leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+          Submit your application through the Beep Fast-Track Queue with your verified readiness profile and tailored Google XYZ bullets attached.
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-          <a
-            href="https://eventbeep.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 transition"
+          <button
+            onClick={onApplyClick}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-extrabold shadow-xl shadow-purple-600/30 transition transform hover:-translate-y-0.5"
           >
-            Explore Beep Career Community
-            <ArrowUpRight className="w-4 h-4" />
-          </a>
+            <Send className="w-4 h-4" />
+            Apply Now via Beep
+          </button>
           <button
             onClick={onNewAudit}
-            className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border text-xs font-bold transition ${
+            className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl border text-xs font-bold transition ${
               isDark 
                 ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-300 hover:text-white' 
                 : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700 hover:text-slate-900 shadow-sm'

@@ -8,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '4mb' }));
 
 // Health and AI status check endpoint
 app.get('/api/status', (req, res) => {
@@ -23,47 +23,64 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// Heuristic fallback analysis engine (guarantees immediate, high-quality, zero-config demo experience)
-function runHeuristicAnalysis(studentSkillsText = '', jobDescriptionText = '', targetRole = '') {
-  const commonTechSkills = [
-    'react', 'react.js', 'javascript', 'typescript', 'node.js', 'express', 'python', 'java',
-    'sql', 'mongodb', 'postgresql', 'html', 'css', 'tailwind', 'git', 'github', 'docker',
-    'aws', 'redux', 'next.js', 'rest api', 'graphql', 'c++', 'tableau', 'powerbi', 'pandas',
-    'numpy', 'excel', 'figma', 'ui/ux', 'seo', 'market research', 'product management',
-    'agile', 'scrum', 'data analysis', 'machine learning'
-  ];
-
-  const sText = studentSkillsText.toLowerCase();
+// Dynamic analysis engine: Calculates a genuinely unique score for every resume/job combination
+function runDynamicHeuristicAnalysis(studentResumeText = '', jobDescriptionText = '', targetRole = '', companyName = '') {
+  const sText = studentResumeText.toLowerCase();
   const jdText = jobDescriptionText.toLowerCase();
 
-  // Extract skills present in JD
-  const jdSkills = commonTechSkills.filter(skill => jdText.includes(skill));
-  // If few known keywords found, extract high-frequency relevant terms
-  if (jdSkills.length < 3) {
-    if (jdText.includes('frontend') || jdText.includes('web')) jdSkills.push('react', 'javascript', 'html/css', 'git');
-    if (jdText.includes('data') || jdText.includes('analytics')) jdSkills.push('sql', 'python', 'excel', 'data analysis');
-    if (jdText.includes('product') || jdText.includes('growth')) jdSkills.push('market research', 'figma', 'analytics', 'communication');
-    if (jdSkills.length === 0) jdSkills.push('problem solving', 'communication', 'git', 'core technical fundamentals');
+  const techDictionary = [
+    'react', 'react.js', 'javascript', 'typescript', 'node.js', 'express', 'python', 'java',
+    'sql', 'advanced sql', 'mongodb', 'postgresql', 'html', 'css', 'tailwind', 'git', 'github',
+    'docker', 'aws', 'redux', 'zustand', 'next.js', 'rest api', 'graphql', 'c++', 'tableau',
+    'powerbi', 'pandas', 'numpy', 'excel', 'figma', 'ui/ux', 'seo', 'market research',
+    'product management', 'agile', 'scrum', 'data analysis', 'machine learning', 'pytorch',
+    'tensorflow', 'nlp', 'llm', 'langchain', 'vector databases', 'a/b testing', 'prd',
+    'user interviews', 'wireframing', 'mixpanel', 'metabase'
+  ];
+
+  // 1. Identify skills demanded by the target JD
+  const rawDemanded = techDictionary.filter(skill => jdText.includes(skill));
+  const canonicalMap = {
+    'react.js': 'react',
+    'advanced sql': 'sql',
+    'node.js': 'node',
+    'rest api': 'apis'
+  };
+
+  const demandedSkills = [...new Set(rawDemanded.map(s => canonicalMap[s] || s))];
+  if (demandedSkills.length === 0) {
+    if (jdText.includes('frontend') || jdText.includes('web')) demandedSkills.push('react', 'javascript', 'typescript', 'tailwind', 'git', 'apis');
+    else if (jdText.includes('data') || jdText.includes('analytics')) demandedSkills.push('sql', 'python', 'pandas', 'tableau', 'excel');
+    else if (jdText.includes('product') || jdText.includes('apm')) demandedSkills.push('user discovery', 'figma', 'prd writing', 'funnel analytics');
+    else demandedSkills.push('core technical skills', 'git', 'problem solving', 'communication');
   }
 
+  // 2. Classify resume skills into Matched, Transferable, and Critical Missing
   const matchedSkills = [];
   const transferableSkills = [];
   const missingSkills = [];
 
-  jdSkills.forEach(skill => {
-    if (sText.includes(skill)) {
+  demandedSkills.forEach(skill => {
+    const isMatched = sText.includes(skill) || 
+      (skill === 'react' && sText.includes('react.js')) ||
+      (skill === 'sql' && sText.includes('mysql')) ||
+      (skill === 'apis' && (sText.includes('api') || sText.includes('rest')));
+
+    if (isMatched) {
       matchedSkills.push(skill);
     } else {
-      // Check transferable logic
+      // Check transferable/adjacent competence
       if ((skill === 'typescript' && sText.includes('javascript')) ||
           (skill === 'next.js' && sText.includes('react')) ||
+          (skill === 'zustand' && (sText.includes('redux') || sText.includes('react'))) ||
           (skill === 'postgresql' && sText.includes('sql')) ||
           (skill === 'tailwind' && sText.includes('css')) ||
-          (skill === 'pandas' && sText.includes('python'))) {
+          (skill === 'pandas' && sText.includes('python')) ||
+          (skill === 'powerbi' && sText.includes('tableau')) ||
+          (skill === 'docker' && sText.includes('git'))) {
         transferableSkills.push({
-          targetSkill: skill,
-          relatedSkill: 'Basics present in your profile',
-          gapEffort: 'Can be bridged in 24-48 hours'
+          skill,
+          note: 'Adjacent foundation detected in your resume (bridgeable in 24-48 hrs)'
         });
       } else {
         missingSkills.push(skill);
@@ -71,14 +88,34 @@ function runHeuristicAnalysis(studentSkillsText = '', jobDescriptionText = '', t
     }
   });
 
-  // Calculate transparent score
-  const totalWeight = (matchedSkills.length * 1.0) + (transferableSkills.length * 0.5);
-  const totalPossible = Math.max(jdSkills.length, 1);
-  let rawScore = Math.round((totalWeight / totalPossible) * 100);
-  if (rawScore < 25) rawScore = 35; // baseline encouraging score
-  if (rawScore > 95) rawScore = 92;
+  // 3. Inspect Resume Credibility & Hygiene Indicators
+  const hasLiveLinks = /(github\.com|vercel\.app|netlify\.app|render\.com|http:\/\/|https:\/\/)/i.test(studentResumeText);
+  const hasMetrics = /(\b\d+%\b|\b\d+k\b|\b\d+ms\b|\breduced\b|\bincreased\b|\boptimized\b|\bwinner\b|\bprocessed\b)/i.test(sText);
+  const wordCount = studentResumeText.trim().split(/\s+/).length;
+  const isTooShort = wordCount < 50;
 
-  let readinessLevel = 'Developing Match';
+  // 4. Calculate dynamic score (Truly specific to this resume!)
+  const matchRatio = matchedSkills.length / Math.max(demandedSkills.length, 1);
+  const transferableRatio = transferableSkills.length / Math.max(demandedSkills.length, 1);
+
+  let rawScore = Math.round((matchRatio * 72) + (transferableRatio * 18));
+  rawScore += 6; // base encouragement
+
+  // Live link credibility adjustment (+10% or -8%)
+  if (hasLiveLinks) rawScore += 10;
+  else rawScore -= 8;
+
+  // Metric backed achievement adjustment (+8% or -6%)
+  if (hasMetrics) rawScore += 8;
+  else rawScore -= 6;
+
+  // Length penalties
+  if (isTooShort) rawScore -= 15;
+
+  // Clamp score bounds realistically
+  rawScore = Math.max(18, Math.min(96, rawScore));
+
+  let readinessLevel = 'Developing Match - Major Gaps';
   let badgeColor = 'amber';
   if (rawScore >= 80) {
     readinessLevel = 'High Match - Ready to Apply';
@@ -88,30 +125,78 @@ function runHeuristicAnalysis(studentSkillsText = '', jobDescriptionText = '', t
     badgeColor = 'blue';
   }
 
-  const primaryMissing = missingSkills[0] || 'Modern Production Practices';
-  const roleName = targetRole || 'Target Internship Role';
+  // 5. Generate "Silent Rejection Radar" (The Out-of-the-Box Feature)
+  const silentRejectionFlags = [];
+
+  if (!hasLiveLinks) {
+    silentRejectionFlags.push({
+      type: 'critical',
+      title: 'Ghost Project Flag (Missing Proof of Work)',
+      description: 'Your resume mentions projects but lacks verifiable live URLs (Vercel, Render) or GitHub repository links. Tech screeners frequently auto-skip unverified claims.'
+    });
+  } else {
+    silentRejectionFlags.push({
+      type: 'pass',
+      title: 'Verifiable Proof of Work Detected',
+      description: 'Resume contains live deployment or GitHub links, establishing authentic hands-on credibility.'
+    });
+  }
+
+  if (missingSkills.length > 0) {
+    silentRejectionFlags.push({
+      type: 'warning',
+      title: `Keyword Filter Risk: Missing ${missingSkills.slice(0, 2).map(s => s.toUpperCase()).join(' & ')}`,
+      description: `This JD explicitly requires ${missingSkills.slice(0, 2).map(s => s.toUpperCase()).join(', ')}. Automated ATS or early recruiter screens will mark your profile as lacking non-negotiable stack components.`
+    });
+  }
+
+  if (!hasMetrics) {
+    silentRejectionFlags.push({
+      type: 'warning',
+      title: 'Passive Impact Language Flag',
+      description: 'Project bullet points describe duties rather than measurable outcomes. Recruiters prefer Google XYZ bullets (e.g. "Accomplished [X], measured by [Y], by doing [Z]").'
+    });
+  } else {
+    silentRejectionFlags.push({
+      type: 'pass',
+      title: 'Metric-Driven Bullet Points Present',
+      description: 'Resume highlights quantified achievements and measurable metrics.'
+    });
+  }
+
+  const primaryMissing = missingSkills[0] || 'Production Deployment Architecture';
+  const roleName = targetRole || 'Internship Candidate';
+  const targetCompany = companyName || 'Target Company';
 
   return {
     isAIGenerated: false,
     engine: 'Curated Heuristic Engine (Demo Mode)',
     targetRole: roleName,
+    company: targetCompany,
     matchScore: rawScore,
     readinessLevel,
     badgeColor,
+    resumeStats: {
+      wordCount,
+      hasLiveLinks,
+      hasMetrics,
+      skillsIdentified: matchedSkills.length + transferableSkills.length
+    },
+    silentRejectionFlags,
     scoreBreakdown: {
-      mustHaveCoverage: `${Math.min(100, Math.round((matchedSkills.length / Math.max(1, jdSkills.length)) * 100))}%`,
-      transferableBonus: `+${transferableSkills.length * 5}% potential`,
-      riskFactor: missingSkills.length > 2 ? 'High resume filter risk on primary keywords' : 'Low keyword risk'
+      mustHaveCoverage: `${Math.round(matchRatio * 100)}%`,
+      transferableBonus: `+${Math.round(transferableRatio * 20)}% potential`,
+      riskFactor: missingSkills.length > 2 ? 'High ATS rejection probability' : (hasLiveLinks ? 'Low risk' : 'Medium risk due to unverified links')
     },
     skillsBreakdown: {
       matched: matchedSkills.map(s => s.toUpperCase()),
-      transferable: transferableSkills.map(t => `${t.targetSkill.toUpperCase()} (${t.gapEffort})`),
+      transferable: transferableSkills.map(t => `${t.skill.toUpperCase()} (Bridgeable)`),
       missingCritical: missingSkills.map(s => s.toUpperCase())
     },
-    recruiterInsight: `Recruiters screening for ${roleName} typically scan for ${missingSkills.slice(0, 3).join(', ') || 'demonstrated live projects'}. Right now, your profile demonstrates strong foundational capability, but lacks explicit proof of ${primaryMissing.toUpperCase()} in production.`,
+    recruiterInsight: `When a recruiter at ${targetCompany} reviews this resume for the ${roleName} opening, they notice you possess ${matchedSkills.slice(0, 2).join(', ') || 'foundational interest'}. However, without clear evidence of ${primaryMissing.toUpperCase()} and quantified project outcomes, this resume risks being deprioritized in favor of candidates with verified live code.`,
     proofOfWorkProject: {
-      title: `48-Hour ${primaryMissing.toUpperCase()} Mini-Proof App`,
-      deliverable: `A lightweight, working demonstration tackling a realistic problem with ${primaryMissing.toUpperCase()} deployed on Vercel/Render with a clean GitHub README.`,
+      title: `48-Hour ${primaryMissing.toUpperCase()} Proof Project`,
+      deliverable: `Build and deploy a targeted micro-application demonstrating ${primaryMissing.toUpperCase()} hosted on Vercel/Render with a clean GitHub README and test suite.`,
       estimatedHours: '6-8 hours over a weekend'
     },
     sevenDayPlan: [
@@ -119,67 +204,67 @@ function runHeuristicAnalysis(studentSkillsText = '', jobDescriptionText = '', t
         day: 'Day 1 & 2',
         phase: 'Core Concept Immersion',
         tasks: [
-          `Learn the top 20% high-yield concepts of ${primaryMissing.toUpperCase()} needed for junior roles.`,
-          `Set up a local environment and build a simple starter repo following official docs.`
+          `Master high-yield essentials of ${primaryMissing.toUpperCase()} specific to ${roleName}.`,
+          `Set up a standalone repo and build a functional minimal sandbox.`
         ]
       },
       {
         day: 'Day 3 & 4',
         phase: 'The 48-Hour Proof-of-Work Project',
         tasks: [
-          `Build the prototype solving a real workflow problem relevant to ${roleName}.`,
-          `Deploy live and write a 3-section GitHub README: Problem Solved, Architecture, and Live URL.`
+          `Build the prototype addressing real challenges faced by ${targetCompany}.`,
+          `Deploy live and write a clear 3-paragraph GitHub README explaining design decisions.`
         ]
       },
       {
         day: 'Day 5',
         phase: 'Resume Optimization (Google XYZ Formula)',
         tasks: [
-          `Rewrite 2-3 project bullets to emphasize metrics and exact keywords from this JD.`,
-          `Place the live project link prominently at the top of your resume and GitHub profile.`
+          `Integrate the 3 tailored XYZ bullet points below directly into your resume.`,
+          `Highlight the live demo link at the very top of your project section.`
         ]
       },
       {
         day: 'Day 6',
         phase: 'Targeted Recruiter & Founder Outreach',
         tasks: [
-          `Identify 3 hiring managers or tech leads at companies hiring for ${roleName}.`,
-          `Send a personalized cold pitch referencing the exact proof-of-work project you just built.`
+          `Locate the hiring manager or tech lead for ${roleName} at ${targetCompany} on LinkedIn.`,
+          `Send the personalized cold pitch referencing your newly deployed micro-project.`
         ]
       },
       {
         day: 'Day 7',
-        phase: 'Interview Readiness & Formal Submission',
+        phase: 'Application Submission via Beep',
         tasks: [
-          `Prepare answers for the 3 most common technical screening questions around ${matchedSkills[0] || 'your stack'} and ${primaryMissing}.`,
-          `Submit the optimized application with customized portfolio links.`
+          `Review the 3 common technical interview questions for ${primaryMissing}.`,
+          `Submit your application through the Beep Fast-Track Queue.`
         ]
       }
     ],
     applicationBooster: {
       tailoredBullets: [
-        `Engineered a responsive, production-ready prototype utilizing ${matchedSkills[0] || 'modern web standards'} and ${primaryMissing.toUpperCase()}, reducing loading overhead by 25%.`,
-        `Integrated state and API workflows following industry best practices for ${roleName}, achieving 99% reliable data handling across client sessions.`,
-        `Authored comprehensive documentation and deployed automated CI/CD pipeline, showcasing strong adherence to Git version control and collaborative developer standards.`
+        `Architected a high-performance prototype incorporating ${matchedSkills[0] || 'core technologies'} and ${primaryMissing.toUpperCase()}, reducing response times by 32% for client sessions.`,
+        `Engineered robust data flows and automated error handling aligned with ${roleName} standards, achieving 99.5% uptime across test environments.`,
+        `Deployed production build with automated CI/CD pipeline, publishing clear documentation and GitHub repository with comprehensive unit tests.`
       ],
-      coldPitchMessage: `Hi [Hiring Manager Name],\n\nI noticed you are hiring for the ${roleName} role. I built a focused project implementing ${primaryMissing.toUpperCase()} and ${matchedSkills[0] || 'modern workflows'} specifically addressing the core requirements in your job description: [Insert Project Link].\n\nI would love 5 minutes to learn if my hands-on background could add immediate value to your team this semester.\n\nBest,\n[Your Name]`
+      coldPitchMessage: `Hi [Hiring Manager Name],\n\nI noticed you are hiring for the ${roleName} role at ${targetCompany}. I recently engineered a working project incorporating ${primaryMissing.toUpperCase()} and ${matchedSkills[0] || 'modern development practices'} specifically addressing your requirements: [Insert Live Project Link].\n\nI would love 5 minutes to learn how my hands-on background can add immediate value to your engineering sprints this semester.\n\nBest,\n[Your Name]`
     }
   };
 }
 
 // Analysis API endpoint
 app.post('/api/analyze', async (req, res) => {
-  const { studentSkills, jobDescription, targetRole } = req.body;
+  const { studentSkills, jobDescription, targetRole, companyName } = req.body;
 
   if (!studentSkills || !jobDescription) {
-    return res.status(400).json({ error: 'Please provide both student skills and the internship job description.' });
+    return res.status(400).json({ error: 'Please provide both student resume/skills and the internship job description.' });
   }
 
   const apiKey = process.env.GEMINI_API_KEY?.trim();
 
-  // If no Gemini key is provided, run heuristic analysis immediately
+  // If no Gemini key is provided, run dynamic heuristic analysis
   if (!apiKey) {
-    const heuristicResult = runHeuristicAnalysis(studentSkills, jobDescription, targetRole);
+    const heuristicResult = runDynamicHeuristicAnalysis(studentSkills, jobDescription, targetRole, companyName);
     return res.json(heuristicResult);
   }
 
@@ -187,23 +272,41 @@ app.post('/api/analyze', async (req, res) => {
   try {
     const prompt = `
 You are a senior hiring partner and career mentor for Beep, an AI career platform for college students in India.
-Analyze the following student profile against the target internship job description.
+Analyze this student's actual resume against the target internship job description.
+Calculate a strictly DYNAMIC score that genuinely reflects whether the resume is beginner, intermediate, or advanced for this role.
 
-STUDENT PROFILE & SKILLS:
+STUDENT RESUME CONTENT:
 ${studentSkills}
 
 TARGET INTERNSHIP JOB DESCRIPTION:
 ${jobDescription}
 
-TARGET ROLE TITLE (if specified):
+TARGET ROLE TITLE:
 ${targetRole || 'Internship Candidate'}
 
-You MUST respond strictly with a valid JSON object matching the following structure without any markdown formatting or backticks:
+COMPANY NAME:
+${companyName || 'Target Company'}
+
+Respond strictly with valid JSON without any markdown formatting or backticks:
 {
-  "targetRole": "Identified Job Title",
-  "matchScore": 72,
+  "targetRole": "${targetRole || 'Internship Candidate'}",
+  "company": "${companyName || 'Target Company'}",
+  "matchScore": 68,
   "readinessLevel": "High Match - Ready to Apply | Moderate Match - 7-Day Sprint Needed | Developing Match",
   "badgeColor": "emerald | blue | amber",
+  "resumeStats": {
+    "wordCount": 240,
+    "hasLiveLinks": true,
+    "hasMetrics": true,
+    "skillsIdentified": 8
+  },
+  "silentRejectionFlags": [
+    {
+      "type": "critical | warning | pass",
+      "title": "Clear short flag title",
+      "description": "Specific explanation of why an ATS or Indian tech recruiter will flag or pass this"
+    }
+  ],
   "scoreBreakdown": {
     "mustHaveCoverage": "Percentage of non-negotiable skills possessed",
     "transferableBonus": "Bonus potential from related skills",
@@ -211,10 +314,10 @@ You MUST respond strictly with a valid JSON object matching the following struct
   },
   "skillsBreakdown": {
     "matched": ["SKILL1", "SKILL2"],
-    "transferable": ["SKILL3 (Reason/Bridge)"],
+    "transferable": ["SKILL3 (Bridgeable)"],
     "missingCritical": ["MISSING_SKILL1", "MISSING_SKILL2"]
   },
-  "recruiterInsight": "Direct, empathetic, 2-3 sentence explanation of what an Indian tech/startup recruiter will think when reading this resume against this JD.",
+  "recruiterInsight": "Direct, empathetic 2-sentence explanation of what an Indian tech/startup recruiter will think when reading this specific resume for this role.",
   "proofOfWorkProject": {
     "title": "Clear Name for a 48-Hour Micro Project",
     "deliverable": "Specific description of what the student should build over a weekend to prove the #1 missing skill",
@@ -274,21 +377,16 @@ You MUST respond strictly with a valid JSON object matching the following struct
     );
 
     if (!response.ok) {
-      const errText = await response.text();
-      console.warn('Gemini API returned error, falling back to heuristic engine:', errText);
-      const fallbackResult = runHeuristicAnalysis(studentSkills, jobDescription, targetRole);
-      fallbackResult.fallbackNotice = 'Gemini API call encountered an error. Showing verified heuristic results.';
+      const fallbackResult = runDynamicHeuristicAnalysis(studentSkills, jobDescription, targetRole, companyName);
+      fallbackResult.fallbackNotice = 'Gemini API call encountered an error. Showing verified dynamic heuristic results.';
       return res.json(fallbackResult);
     }
 
     const result = await response.json();
     const candidateText = result.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    if (!candidateText) {
-      throw new Error('No content returned from Gemini model');
-    }
+    if (!candidateText) throw new Error('No content returned from Gemini model');
 
-    // Clean any accidental markdown backticks
     const cleanedText = candidateText.replace(/```json/g, '').replace(/```/g, '').trim();
     const parsedData = JSON.parse(cleanedText);
 
@@ -300,13 +398,13 @@ You MUST respond strictly with a valid JSON object matching the following struct
     });
   } catch (error) {
     console.error('Error during AI analysis, invoking fallback:', error);
-    const fallbackResult = runHeuristicAnalysis(studentSkills, jobDescription, targetRole);
-    fallbackResult.fallbackNotice = 'Live AI error occurred. Fallback heuristic analysis loaded.';
+    const fallbackResult = runDynamicHeuristicAnalysis(studentSkills, jobDescription, targetRole, companyName);
+    fallbackResult.fallbackNotice = 'Live AI error occurred. Fallback dynamic heuristic analysis loaded.';
     return res.json(fallbackResult);
   }
 });
 
 app.listen(PORT, () => {
   console.log(`[Beep Server] Backend API running at http://localhost:${PORT}`);
-  console.log(`[Beep Server] Mode: ${process.env.GEMINI_API_KEY ? 'Live Gemini AI' : 'Demo / Heuristic Mode'}`);
+  console.log(`[Beep Server] Mode: ${process.env.GEMINI_API_KEY ? 'Live Gemini AI' : 'Demo / Dynamic Heuristic Mode'}`);
 });
