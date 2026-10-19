@@ -389,6 +389,9 @@ export default function App() {
         isOpen={isStatsModalOpen}
         onClose={() => setIsStatsModalOpen(false)}
         theme={theme}
+        user={user}
+        result={result}
+        applications={applications}
       />
 
       {/* Footer */}
