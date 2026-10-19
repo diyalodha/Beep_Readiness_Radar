@@ -44,7 +44,7 @@ export default function InternshipExplorer({
             </h2>
           </div>
           <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            Pick an opening from verified hiring partners or paste any custom job description.
+            Illustrative sample job scenarios modeled after real campus postings, or paste your own custom job description.
           </p>
         </div>
 
