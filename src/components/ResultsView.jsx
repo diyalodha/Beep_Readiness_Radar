@@ -5,6 +5,7 @@ import {
   Terminal, Sparkles, UserCheck, ShieldAlert, Cpu, 
   Send, ShieldCheck, AlertTriangle
 } from 'lucide-react';
+import ApplicantPoolStats from './ApplicantPoolStats';
 
 export default function ResultsView({ result, onNewAudit, onApplyClick, theme }) {
   const [copiedBulletIdx, setCopiedBulletIdx] = useState(null);
@@ -204,6 +205,9 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
         </div>
 
       </div>
+ 
+      {/* 2.5 APPLICANT POOL INTELLIGENCE & PERCENTILE BENCHMARK (STATISTICS ENGINE) */}
+      <ApplicantPoolStats result={result} theme={theme} />
 
       {/* 3. OUT-OF-THE-BOX FEATURE: THE SILENT REJECTION RADAR */}
       {result.silentRejectionFlags && result.silentRejectionFlags.length > 0 && (
