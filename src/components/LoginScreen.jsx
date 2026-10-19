@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Shield, ArrowRight, CheckCircle2, User, Mail, Sun, Moon } from 'lucide-react';
+import { Sparkles, Shield, CheckCircle2, Sun, Moon, Info } from 'lucide-react';
 
 export default function LoginScreen({ onLogin, theme, toggleTheme }) {
   const [showGoogleModal, setShowGoogleModal] = useState(false);
@@ -128,6 +128,21 @@ export default function LoginScreen({ onLogin, theme, toggleTheme }) {
               </p>
             </div>
 
+            {/* Demo Sign-In Transparency Banner */}
+            <div className={`mb-4 p-3 rounded-2xl border flex items-start gap-2.5 text-[11px] leading-relaxed ${
+              isDark
+                ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                : 'bg-amber-50 border-amber-300 text-amber-800'
+            }`}>
+              <Info className="w-4 h-4 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">Demo Sign-In Only</p>
+                <p className="opacity-90 mt-0.5">
+                  No real Google OAuth is performed. Any account you pick here creates a local-only profile stored in your browser's <span className="font-mono">localStorage</span>. Do not enter real personal data.
+                </p>
+              </div>
+            </div>
+
             {/* Google Login Action */}
             <div className="space-y-4">
               
@@ -203,12 +218,16 @@ export default function LoginScreen({ onLogin, theme, toggleTheme }) {
                 <CheckCircle2 className="w-3.5 h-3.5 text-purple-500 shrink-0" />
                 <span>Action-first: Includes 48-hr project & Google XYZ bullets</span>
               </div>
+              <div className="flex items-start gap-2">
+                <Shield className="w-3.5 h-3.5 text-purple-500 shrink-0 mt-0.5" />
+                <span>Your resume text is only used to compute your score. The demo backend does not persist resume contents.</span>
+              </div>
             </div>
 
           </div>
 
           <p className={`text-center text-[11px] mt-4 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-            By signing in, you agree to discover real student problems for Beep.
+            This is a discovery MVP. Sessions are local-only and no identity is verified.
           </p>
 
         </div>

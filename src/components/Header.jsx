@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, HelpCircle, Info, Sun, Moon, LogOut, User } from 'lucide-react';
+import { HelpCircle, Info, Sun, Moon, LogOut } from 'lucide-react';
 
 export default function Header({ apiStatus, user, onLogout, theme, toggleTheme }) {
   const [showInfo, setShowInfo] = useState(false);
@@ -96,6 +96,15 @@ export default function Header({ apiStatus, user, onLogout, theme, toggleTheme }
                 <span className="text-xs font-semibold max-w-[90px] truncate hidden sm:inline">
                   {user.name}
                 </span>
+                {user._demo && (
+                  <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                    isDark
+                      ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
+                      : 'bg-amber-50 border-amber-300 text-amber-700'
+                  }`} title="Local demo session — no real authentication is happening">
+                    Demo
+                  </span>
+                )}
               </button>
 
               {/* User Menu Dropdown */}
@@ -111,6 +120,11 @@ export default function Header({ apiStatus, user, onLogout, theme, toggleTheme }
                     <p className="text-[10px] text-purple-500 font-medium mt-0.5 truncate">
                       {user.college || 'Logged In with Google'}
                     </p>
+                    {user._demo && (
+                      <p className={`text-[10px] mt-1 ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
+                        Demo session. Not a real signed-in Google account.
+                      </p>
+                    )}
                   </div>
 
                   <button

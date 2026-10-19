@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SAMPLE_RESUMES } from '../data/sampleRoles';
+import { extractResumeTextFromFile, ACCEPT_ATTR } from '../utils/documentParser';
 import { 
   UploadCloud, FileText, CheckCircle2, RefreshCw, 
   Sparkles, Eye, Trash2, X, AlertCircle, FileCheck, 
-  ArrowRight, ExternalLink, Download
+  ArrowRight, ExternalLink, ShieldCheck
 } from 'lucide-react';
 
 export default function ResumeUploader({
@@ -11,7 +12,6 @@ export default function ResumeUploader({
   setResumeText,
   fileName,
   setFileName,
-  selectedResumeId,
   onSelectSampleResume,
   onRemoveResume,
   isCustomJob,
@@ -24,7 +24,9 @@ export default function ResumeUploader({
   const [isDragging, setIsDragging] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [fileUrl, setFileUrl] = useState(null);
-  const [fileType, setFileType] = useState('text'); // 'pdf' | 'text' | 'sample'
+  const [fileType, setFileType] = useState('text'); // 'pdf' | 'docx' | 'text' | 'sample'
+  const [parseError, setParseError] = useState('');
+  const [isParsing, setIsParsing] = useState(false);
   const fileInputRef = useRef(null);
 
   const isDark = theme === 'dark';
@@ -38,52 +40,44 @@ export default function ResumeUploader({
     };
   }, [fileUrl]);
 
-  const handleFileProcess = (file) => {
+  const handleFileProcess = async (file) => {
     if (!file) return;
 
-    // Revoke any previous object URL
+    // Reset prior state before parsing the new file.
     if (fileUrl) {
       URL.revokeObjectURL(fileUrl);
       setFileUrl(null);
     }
+    setParseError('');
+    setResumeText('');
+    setFileName('');
+    setIsParsing(true);
 
-    setFileName(file.name);
+    try {
+      const { kind, text } = await extractResumeTextFromFile(file);
+      setFileName(file.name);
+      setResumeText(text);
 
-    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-
-    if (isPdf) {
-      // 1. Create a true native object URL to preview the EXACT PDF file
-      const url = URL.createObjectURL(file);
-      setFileUrl(url);
-      setFileType('pdf');
-
-      // 2. Extract textual data from PDF stream for the AI match engine
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target.result;
-        const bytes = new Uint8Array(content);
-        let extracted = '';
-        for (let i = 0; i < bytes.length; i++) {
-          const char = String.fromCharCode(bytes[i]);
-          if (/[\x20-\x7E\t\r\n]/.test(char)) {
-            extracted += char;
-          }
-        }
-        const cleaned = extracted.replace(/[^\x20-\x7E\t\r\n]/g, ' ').replace(/\s+/g, ' ').trim();
-        setResumeText(cleaned.length > 50 ? cleaned : `Resume document: ${file.name}\nCandidate technical coursework and projects.`);
-      };
-      reader.readAsArrayBuffer(file);
-
-    } else {
-      // Non-PDF file (TXT, MD)
-      setFileUrl(null);
+      if (kind === 'pdf') {
+        // Native object URL so the user can visually inspect the exact PDF.
+        const url = URL.createObjectURL(file);
+        setFileUrl(url);
+        setFileType('pdf');
+      } else if (kind === 'docx') {
+        setFileUrl(null);
+        setFileType('docx');
+      } else {
+        setFileUrl(null);
+        setFileType('text');
+      }
+    } catch (err) {
+      const message = err?.message || 'Could not read this file.';
+      setParseError(message);
+      setResumeText('');
+      setFileName('');
       setFileType('text');
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setResumeText(e.target.result || '');
-      };
-      reader.readAsText(file);
+    } finally {
+      setIsParsing(false);
     }
   };
 
@@ -109,6 +103,7 @@ export default function ResumeUploader({
       URL.revokeObjectURL(fileUrl);
       setFileUrl(null);
     }
+    setParseError('');
     setFileType('sample');
     onSelectSampleResume(sample);
   };
@@ -118,6 +113,7 @@ export default function ResumeUploader({
       URL.revokeObjectURL(fileUrl);
       setFileUrl(null);
     }
+    setParseError('');
     setFileType('text');
     onRemoveResume();
   };
@@ -131,7 +127,7 @@ export default function ResumeUploader({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.doc,.docx,.txt,.rtf,.md"
+        accept={ACCEPT_ATTR}
         className="hidden"
         onChange={(e) => {
           if (e.target.files && e.target.files[0]) {
@@ -195,6 +191,21 @@ export default function ResumeUploader({
         </div>
       )}
 
+      {/* Visible parse error banner (never silent) */}
+      {parseError && (
+        <div className={`mb-3 p-3 rounded-xl border flex items-start gap-2 text-xs ${
+          isDark
+            ? 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+            : 'bg-rose-50 border-rose-300 text-rose-800'
+        }`}>
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-bold">Could not read that file</p>
+            <p className="opacity-90 mt-0.5">{parseError}</p>
+          </div>
+        </div>
+      )}
+
       {/* STATE A: RESUME IS ATTACHED */}
       {resumeText ? (
         <div className={`p-5 rounded-2xl border transition-all shadow-md ${
@@ -212,9 +223,9 @@ export default function ResumeUploader({
               title="Click to preview exact file"
             >
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-xs shadow-md group-hover:scale-105 transition-transform shrink-0 ${
-                fileType === 'pdf' ? 'bg-rose-600' : 'bg-gradient-to-tr from-purple-600 to-indigo-600'
+                fileType === 'pdf' ? 'bg-rose-600' : (fileType === 'docx' ? 'bg-blue-600' : 'bg-gradient-to-tr from-purple-600 to-indigo-600')
               }`}>
-                {fileType === 'pdf' ? 'PDF' : <FileCheck className="w-6 h-6" />}
+                {fileType === 'pdf' ? 'PDF' : (fileType === 'docx' ? 'DOCX' : <FileCheck className="w-6 h-6" />)}
               </div>
               
               <div className="min-w-0">
@@ -232,7 +243,7 @@ export default function ResumeUploader({
                 <p className={`text-xs mt-0.5 flex items-center gap-2 ${
                   isDark ? 'text-slate-400' : 'text-slate-500'
                 }`}>
-                  <span>{fileType === 'pdf' ? 'Native PDF Document' : `${wordCount} words`}</span>
+                  <span>{fileType === 'pdf' ? 'Native PDF Document' : (fileType === 'docx' ? 'Word Document (parsed with Mammoth)' : `${wordCount} words`)}</span>
                   <span>•</span>
                   <span className="text-purple-600 dark:text-purple-400 font-semibold group-hover:underline flex items-center gap-1">
                     <Eye className="w-3.5 h-3.5" /> Click to view exact file
@@ -284,6 +295,14 @@ export default function ResumeUploader({
 
           </div>
 
+          {/* Privacy notice (attached state) */}
+          <div className={`mt-3 flex items-start gap-2 text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+            <ShieldCheck className="w-3.5 h-3.5 mt-0.5 shrink-0 text-purple-500" />
+            <p>
+              <span className="font-semibold">Privacy:</span> Your resume text is sent to our analysis engine to compute your readiness score. It is not stored on our servers after analysis.
+            </p>
+          </div>
+
         </div>
       ) : (
         /* STATE B: NO RESUME ATTACHED YET (CLEAN DROPZONE) */
@@ -304,15 +323,15 @@ export default function ResumeUploader({
             }`}
           >
             <div className="w-14 h-14 rounded-2xl bg-purple-600/10 text-purple-600 dark:text-purple-400 flex items-center justify-center mx-auto mb-3 shadow-inner">
-              <UploadCloud className="w-7 h-7" />
+              {isParsing ? <RefreshCw className="w-7 h-7 animate-spin" /> : <UploadCloud className="w-7 h-7" />}
             </div>
 
             <h3 className={`text-sm sm:text-base font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-              Drop your Resume here, or click to browse
+              {isParsing ? 'Parsing your resume...' : 'Drop your Resume here, or click to browse'}
             </h3>
             
             <p className={`text-xs mt-1 max-w-md mx-auto ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Upload your PDF, DOCX, or TXT file. You can preview the exact document before auditing.
+              Supported: PDF (parsed with pdf.js), DOCX (Mammoth), RTF, TXT, MD. Max file size 5 MB. Scanned image PDFs are not supported without OCR.
             </p>
 
             <div className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-purple-600 text-white shadow-md">
@@ -354,6 +373,14 @@ export default function ResumeUploader({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Privacy notice */}
+          <div className={`flex items-start gap-2 text-[11px] mt-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+            <ShieldCheck className="w-3.5 h-3.5 mt-0.5 shrink-0 text-purple-500" />
+            <p>
+              <span className="font-semibold">Privacy:</span> Your resume text is sent to our analysis engine only to compute a readiness score for you. The server does not log or persist resume contents. Parsed text stays in your browser until you remove it.
+            </p>
           </div>
 
         </div>

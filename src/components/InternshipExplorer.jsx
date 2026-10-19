@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { INTERNSHIPS } from '../data/sampleRoles';
-import { Briefcase, MapPin, IndianRupee, Check, ChevronDown, ChevronUp, Sparkles, PlusCircle } from 'lucide-react';
+import { MapPin, IndianRupee, Check, ChevronDown, ChevronUp, PlusCircle, Info } from 'lucide-react';
 
 export default function InternshipExplorer({
   selectedInternship,
@@ -85,6 +85,19 @@ export default function InternshipExplorer({
             <PlusCircle className="w-3.5 h-3.5" />
             Paste Custom JD
           </button>
+        </div>
+      </div>
+
+      {/* Sample Data Notice */}
+      <div className={`mb-4 p-3 rounded-2xl border flex items-start gap-2.5 text-[11px] leading-relaxed ${
+        isDark
+          ? 'bg-indigo-950/30 border-indigo-500/40 text-indigo-200'
+          : 'bg-indigo-50 border-indigo-200 text-indigo-800'
+      }`}>
+        <Info className="w-4 h-4 shrink-0 mt-0.5" />
+        <div>
+          <span className="font-bold">Sample scenarios.</span>
+          {' '}The internships below are fictional example listings created for this MVP demo. They do not represent currently open vacancies at Swiggy, CRED, Zepto, EventBeep, or InMobi. Use the "Paste Custom JD" option to audit against a real job posting.
         </div>
       </div>
 

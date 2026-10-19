@@ -1,6 +1,9 @@
+// All records below are fictional sample scenarios for the Founder's Office MVP.
+// They are NOT verified live vacancies. Do not present them as real openings.
 export const INTERNSHIPS = [
   {
     id: 'swiggy-frontend',
+    _sample: true,
     title: 'Frontend Engineering Intern',
     company: 'Swiggy',
     logo: 'S',
@@ -32,6 +35,7 @@ Requirements:
   },
   {
     id: 'cred-data',
+    _sample: true,
     title: 'Data Analyst Intern',
     company: 'CRED',
     logo: 'C',
@@ -63,6 +67,7 @@ Requirements:
   },
   {
     id: 'zepto-fullstack',
+    _sample: true,
     title: 'Fullstack Web Intern',
     company: 'Zepto',
     logo: 'Z',
@@ -92,6 +97,7 @@ Requirements:
   },
   {
     id: 'eventbeep-product',
+    _sample: true,
     title: 'Associate Product Manager (APM) Intern',
     company: 'EventBeep',
     logo: 'B',
@@ -123,6 +129,7 @@ Requirements:
   },
   {
     id: 'inmobi-aiml',
+    _sample: true,
     title: 'AI / Machine Learning Intern',
     company: 'InMobi',
     logo: 'I',
@@ -152,9 +159,12 @@ Requirements:
   }
 ];
 
+// Sample student resume text used to demo the audit flow.
+// These are fictional characters. Any contact info is fake.
 export const SAMPLE_RESUMES = [
   {
     id: 'beginner',
+    _sample: true,
     label: 'Beginner Student Resume',
     tag: 'Tier-3 2nd/3rd Year',
     expectedScoreRange: '30% - 40%',
@@ -182,6 +192,7 @@ COLLEGE INVOLVEMENT:
   },
   {
     id: 'intermediate',
+    _sample: true,
     label: 'Intermediate Student Resume',
     tag: 'Active Builder',
     expectedScoreRange: '60% - 72%',
@@ -212,6 +223,7 @@ ACHIEVEMENTS & LEADERSHIP:
   },
   {
     id: 'advanced',
+    _sample: true,
     label: 'Job-Ready Fullstack Resume',
     tag: 'High Match Candidate',
     expectedScoreRange: '82% - 94%',

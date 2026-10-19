@@ -15,6 +15,9 @@ dist-ssr
 .env.*
 !.env.example
 
+# Runtime data (submitted applications with personal info — never commit)
+server/data/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

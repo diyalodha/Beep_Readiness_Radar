@@ -6,7 +6,8 @@ import InternshipExplorer from './components/InternshipExplorer';
 import ResumeUploader from './components/ResumeUploader';
 import ResultsView from './components/ResultsView';
 import ApplicationModal from './components/ApplicationModal';
-import { INTERNSHIPS, SAMPLE_RESUMES } from './data/sampleRoles';
+import { INTERNSHIPS } from './data/sampleRoles';
+import { runDynamicHeuristicAnalysis } from './utils/heuristicCore';
 import { AlertTriangle, Sparkles, ArrowRight, RefreshCw } from 'lucide-react';
 
 export default function App() {
@@ -40,7 +41,6 @@ export default function App() {
   // Resume State (Empty by default so user sees the dropzone)
   const [resumeText, setResumeText] = useState('');
   const [fileName, setFileName] = useState('');
-  const [selectedResumeId, setSelectedResumeId] = useState(null);
 
   // Analysis & Execution State
   const [isLoading, setIsLoading] = useState(false);
@@ -66,8 +66,10 @@ export default function App() {
   };
 
   const handleLogin = (userData) => {
-    setUser(userData);
-    localStorage.setItem('beep_user', JSON.stringify(userData));
+    // Mark every local session as a demo user; no real authentication is happening.
+    const stampedUser = { ...userData, _demo: true };
+    setUser(stampedUser);
+    localStorage.setItem('beep_user', JSON.stringify(stampedUser));
   };
 
   const handleLogout = () => {
@@ -104,14 +106,12 @@ export default function App() {
   };
 
   const handleSelectSampleResume = (resumeObj) => {
-    setSelectedResumeId(resumeObj.id);
     setResumeText(resumeObj.content);
     setFileName(`${resumeObj.label.replace(/\s+/g, '_')}.pdf`);
     setErrorMessage('');
   };
 
   const handleRemoveResume = () => {
-    setSelectedResumeId(null);
     setResumeText('');
     setFileName('');
     setResult(null);
@@ -162,120 +162,27 @@ export default function App() {
         if (el) el.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     } catch (err) {
-      console.error('API call failed, running dynamic fallback:', err);
-      // Fallback calculation directly in frontend
-      const wordCount = resumeText.trim().split(/\s+/).length;
-      let calculatedScore = 55;
-      if (selectedResumeId === 'beginner') calculatedScore = 34;
-      else if (selectedResumeId === 'intermediate') calculatedScore = 68;
-      else if (selectedResumeId === 'advanced') calculatedScore = 89;
+      console.error('API call failed, running client heuristic:', err);
+      // Compute a real fallback from the actual resume + JD text (never preset scores).
+      let clientResult = null;
+      try {
+        clientResult = runDynamicHeuristicAnalysis(
+          resumeText,
+          targetJobText || '',
+          (roleTitle || 'Internship Candidate'),
+          (company || 'Hiring Company')
+        );
+        clientResult.engine = 'Client Heuristic Fallback (Backend Offline)';
+        clientResult.fallbackNotice = 'Backend server was unreachable. Scoring was computed locally from your actual resume text using the same heuristic engine.';
+      } catch (innerErr) {
+        console.error('Client heuristic also failed:', innerErr);
+        setErrorMessage('Analysis failed both on the server and locally. Please check your inputs and try again.');
+        setIsLoading(false);
+        return;
+      }
 
-      const fallbackResult = {
-        isAIGenerated: false,
-        engine: 'Dynamic Heuristic Engine (Offline Simulation)',
-        targetRole: roleTitle || 'Internship Candidate',
-        company: company || 'Hiring Partner',
-        matchScore: calculatedScore,
-        readinessLevel: calculatedScore >= 80 ? 'High Match - Ready to Apply' : (calculatedScore >= 55 ? 'Moderate Match - 7-Day Sprint Needed' : 'Developing Match - Major Gaps'),
-        badgeColor: calculatedScore >= 80 ? 'emerald' : (calculatedScore >= 55 ? 'blue' : 'amber'),
-        resumeStats: {
-          wordCount,
-          hasLiveLinks: selectedResumeId !== 'beginner',
-          hasMetrics: selectedResumeId === 'advanced',
-          skillsIdentified: selectedResumeId === 'advanced' ? 14 : (selectedResumeId === 'intermediate' ? 8 : 4)
-        },
-        silentRejectionFlags: [
-          {
-            type: selectedResumeId === 'beginner' ? 'critical' : 'pass',
-            title: selectedResumeId === 'beginner' ? 'Ghost Project Warning (Missing Live Links)' : 'Verifiable Live Project Links Found',
-            description: selectedResumeId === 'beginner' 
-              ? 'Your resume mentions projects but lacks verifiable live URLs (Vercel, Render) or GitHub links. Recruiters skip unverified claims.'
-              : 'Resume contains live deployment links, establishing immediate practical credibility.'
-          },
-          {
-            type: calculatedScore < 80 ? 'warning' : 'pass',
-            title: calculatedScore < 80 ? 'Production Workflow Gap Detected' : 'Core Architecture Alignment Verified',
-            description: calculatedScore < 80 
-              ? 'JD requires modern deployment workflows and state management not clearly proven in this resume.'
-              : 'Resume demonstrates strong alignment with required production frameworks.'
-          },
-          {
-            type: selectedResumeId === 'advanced' ? 'pass' : 'warning',
-            title: selectedResumeId === 'advanced' ? 'Metric-Backed Google XYZ Bullets Present' : 'Passive Bullet Points Flag',
-            description: selectedResumeId === 'advanced'
-              ? 'Projects feature clear percentage and performance metrics.'
-              : 'Bullets describe general duties rather than quantifiable impact metrics.'
-          }
-        ],
-        scoreBreakdown: {
-          mustHaveCoverage: `${calculatedScore}%`,
-          transferableBonus: '+15% potential',
-          riskFactor: calculatedScore < 60 ? 'High ATS rejection probability' : 'Low risk'
-        },
-        skillsBreakdown: {
-          matched: selectedResumeId === 'beginner' ? ['HTML/CSS', 'BASIC JS'] : ['REACT.JS', 'JAVASCRIPT', 'TAILWIND CSS', 'GIT'],
-          transferable: ['TYPESCRIPT (Can bridge in 48 hrs)', 'NEXT.JS (Bridgeable)'],
-          missingCritical: selectedResumeId === 'advanced' ? [] : ['PRODUCTION ARCHITECTURE', 'UNIT TESTING']
-        },
-        recruiterInsight: `For the ${roleTitle} role at ${company}, your profile reflects ${calculatedScore >= 70 ? 'strong practical competence' : 'early foundational curiosity'}. However, automated filters prioritize candidates with verified live projects and metric-backed impact.`,
-        proofOfWorkProject: {
-          title: `48-Hour ${roleTitle.split(' ')[0]} Micro-Proof Project`,
-          deliverable: `Build a focused working prototype deployed live on Vercel with a structured GitHub README solving a real workflow for ${company}.`,
-          estimatedHours: '6-8 hours over a weekend'
-        },
-        sevenDayPlan: [
-          {
-            day: 'Day 1 & 2',
-            phase: 'Core Concept Immersion',
-            tasks: [
-              `Review essential junior-level requirements for ${roleTitle}.`,
-              'Set up a clean GitHub repository and configure local development.'
-            ]
-          },
-          {
-            day: 'Day 3 & 4',
-            phase: '48-Hour Proof-of-Work Project',
-            tasks: [
-              `Build and deploy the micro-app demonstrating core skills needed at ${company}.`,
-              'Publish live demo URL and write a clean architecture section in your README.'
-            ]
-          },
-          {
-            day: 'Day 5',
-            phase: 'Resume Optimization (Google XYZ Formula)',
-            tasks: [
-              'Rewrite your top project bullet points with metrics.',
-              'Place the live demo link at the very top of your resume.'
-            ]
-          },
-          {
-            day: 'Day 6',
-            phase: 'Targeted Outreach',
-            tasks: [
-              `Locate tech leads at ${company} on LinkedIn.`,
-              'Send a concise 4-sentence cold pitch referencing your live project.'
-            ]
-          },
-          {
-            day: 'Day 7',
-            phase: 'Application Submission via Beep',
-            tasks: [
-              'Review common interview questions for this stack.',
-              'Submit your application through the Beep Fast-Track Queue.'
-            ]
-          }
-        ],
-        applicationBooster: {
-          tailoredBullets: [
-            `Engineered a responsive, production-ready prototype utilizing modern frameworks, reducing initial load latency by 28%.`,
-            `Integrated clean state management and REST API workflows for ${roleTitle}, achieving 99% reliable data synchronization across sessions.`,
-            `Deployed production build with automated CI/CD pipeline on Vercel, adhering to strict version control and documentation standards.`
-          ],
-          coldPitchMessage: `Hi [Hiring Manager Name],\n\nI noticed you are hiring for the ${roleTitle} role at ${company}. I built a focused project implementing the core requirements mentioned in your job description: [Insert Live Project Link].\n\nI would love 5 minutes to learn if my hands-on background could add immediate value to your engineering sprints this semester.\n\nBest,\n[Your Name]`
-        }
-      };
+      setResult(clientResult);
 
-      setResult(fallbackResult);
       setTimeout(() => {
         const el = document.getElementById('results-section');
         if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -344,7 +251,6 @@ export default function App() {
           setResumeText={setResumeText}
           fileName={fileName}
           setFileName={setFileName}
-          selectedResumeId={selectedResumeId}
           onSelectSampleResume={handleSelectSampleResume}
           onRemoveResume={handleRemoveResume}
           isCustomJob={isCustomJob}

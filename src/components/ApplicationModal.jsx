@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle2, Sparkles, Send, X, ExternalLink, IndianRupee, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, Send, X, ShieldCheck, AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function ApplicationModal({
   isOpen,
@@ -13,16 +13,49 @@ export default function ApplicationModal({
   const [githubUrl, setGithubUrl] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [refId, setRefId] = useState('');
+  const [submittedAt, setSubmittedAt] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   if (!isOpen) return null;
 
   const isDark = theme === 'dark';
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const randomRef = 'BEEP-' + Math.floor(100000 + Math.random() * 900000);
-    setRefId(randomRef);
-    setIsSubmitted(true);
+    setSubmitError('');
+    setIsSubmitting(true);
+
+    const payload = {
+      name: user?.name || 'Applicant',
+      email: user?.email || '',
+      phone: phoneNumber,
+      githubUrl,
+      role: internship?.title || 'Internship Role',
+      company: internship?.company || 'Hiring Partner',
+      matchScore: typeof result?.matchScore === 'number' ? result.matchScore : null,
+    };
+
+    try {
+      const resp = await fetch('/api/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => ({}));
+        throw new Error(errBody?.error || `Server returned ${resp.status}`);
+      }
+      const data = await resp.json();
+      setRefId(data.refId);
+      setSubmittedAt(data.submittedAt || new Date().toISOString());
+      setIsSubmitted(true);
+    } catch (err) {
+      console.error('Application submission failed:', err);
+      setSubmitError(err?.message || 'Could not submit your application. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -147,13 +180,27 @@ export default function ApplicationModal({
 
               {/* Submit CTA */}
               <div className="pt-2">
+                {submitError && (
+                  <div className={`mb-2 p-2.5 rounded-xl border text-[11px] flex items-start gap-2 ${
+                    isDark
+                      ? 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+                      : 'bg-rose-50 border-rose-300 text-rose-800'
+                  }`}>
+                    <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                    <span><strong>Submission failed.</strong> {submitError}</span>
+                  </div>
+                )}
                 <button
                   type="submit"
-                  className="w-full py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 transition"
+                  disabled={isSubmitting}
+                  className="w-full py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed text-white shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 transition"
                 >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Submit Application via Beep Talent Pool</span>
+                  {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  <span>{isSubmitting ? 'Submitting to Beep Talent Pool...' : 'Submit Application via Beep Talent Pool'}</span>
                 </button>
+                <p className={`mt-2 text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                  Submissions are stored in <span className="font-mono">server/data/applications.json</span> on the demo backend for the Founder's Office review.
+                </p>
               </div>
 
             </form>
@@ -176,7 +223,7 @@ export default function ApplicationModal({
               <p className={`text-xs max-w-sm mx-auto mt-1 leading-relaxed ${
                 isDark ? 'text-slate-400' : 'text-slate-500'
               }`}>
-                Your resume and tailored readiness profile have been dispatched to the recruiting coordinator at <strong>{internship?.company || 'the company'}</strong>.
+                Your application has been persisted to the Beep demo backend at <span className="font-mono">{submittedAt ? new Date(submittedAt).toLocaleString() : 'just now'}</span>. Reference: <strong>{internship?.company || 'the company'}</strong> / <strong>{internship?.title || 'Internship'}</strong>.
               </p>
             </div>
 

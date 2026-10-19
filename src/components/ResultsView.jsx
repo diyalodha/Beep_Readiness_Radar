@@ -1,32 +1,51 @@
 import React, { useState } from 'react';
 import { 
   CheckCircle, AlertCircle, HelpCircle, Calendar, 
-  Copy, Check, Share2, ArrowUpRight, Flame, Layers, 
+  Copy, Check, Share2, Flame, Layers, 
   Terminal, Sparkles, UserCheck, ShieldAlert, Cpu, 
-  Send, ShieldCheck, AlertTriangle
+  Send, ShieldCheck, AlertTriangle, Link2
 } from 'lucide-react';
-import ApplicantPoolStats from './ApplicantPoolStats';
 
 export default function ResultsView({ result, onNewAudit, onApplyClick, theme }) {
   const [copiedBulletIdx, setCopiedBulletIdx] = useState(null);
   const [copiedColdPitch, setCopiedColdPitch] = useState(false);
-  const [shareFeedback, setShareFeedback] = useState(false);
+  const [copyStatus, setCopyStatus] = useState({ ok: null, message: '' });
 
   if (!result) return null;
 
   const isDark = theme === 'dark';
 
-  const copyToClipboard = (text, type, index = null) => {
-    navigator.clipboard.writeText(text);
+  const doCopy = async (text) => {
+    try {
+      if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+        throw new Error('Clipboard API not available in this browser context.');
+      }
+      await navigator.clipboard.writeText(text);
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err?.message || 'Clipboard permission denied.' };
+    }
+  };
+
+  const flashCopyStatus = (payload) => {
+    setCopyStatus(payload);
+    setTimeout(() => setCopyStatus({ ok: null, message: '' }), 2500);
+  };
+
+  const handleCopy = async (text, type, index = null) => {
+    const outcome = await doCopy(text);
+    if (!outcome.ok) {
+      flashCopyStatus({ ok: false, message: outcome.error });
+      return;
+    }
     if (type === 'bullet') {
       setCopiedBulletIdx(index);
       setTimeout(() => setCopiedBulletIdx(null), 2000);
     } else if (type === 'coldPitch') {
       setCopiedColdPitch(true);
       setTimeout(() => setCopiedColdPitch(false), 2000);
-    } else if (type === 'share') {
-      setShareFeedback(true);
-      setTimeout(() => setShareFeedback(false), 2500);
+    } else if (type === 'url') {
+      flashCopyStatus({ ok: true, message: 'Page URL copied to clipboard.' });
     }
   };
 
@@ -91,15 +110,17 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
           </button>
 
           <button
-            onClick={() => copyToClipboard(window.location.href, 'share')}
+            onClick={() => handleCopy(window.location.href, 'url')}
+            title="Copies the current page URL to your clipboard. Anyone you share it with will need to redo the audit themselves."
             className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition ${
               isDark 
                 ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-200' 
                 : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700 shadow-sm'
             }`}
           >
-            {shareFeedback ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Share2 className="w-3.5 h-3.5" />}
-            {shareFeedback ? 'Copied!' : 'Share'}
+            {copyStatus.ok === true ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Link2 className="w-3.5 h-3.5" />}
+            <span>Copy Page URL</span>
+            <Share2 className="w-3 h-3 opacity-60" />
           </button>
         </div>
       </div>
@@ -206,8 +227,18 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
 
       </div>
  
-      {/* 2.5 APPLICANT POOL INTELLIGENCE & PERCENTILE BENCHMARK (STATISTICS ENGINE) */}
-      <ApplicantPoolStats result={result} theme={theme} />
+      {/* 2.5 (removed) Fabricated applicant-pool percentile stats deleted. */}
+
+      {/* Copy status toast (bottom-left) */}
+      {copyStatus.ok !== null && (
+        <div className={`fixed bottom-4 left-4 z-50 px-3.5 py-2 rounded-xl border text-xs font-semibold shadow-lg ${
+          copyStatus.ok
+            ? (isDark ? 'bg-emerald-950/90 border-emerald-500/40 text-emerald-200' : 'bg-emerald-50 border-emerald-300 text-emerald-800')
+            : (isDark ? 'bg-rose-950/90 border-rose-500/40 text-rose-200' : 'bg-rose-50 border-rose-300 text-rose-800')
+        }`}>
+          {copyStatus.ok ? 'Copied.' : `Copy failed: ${copyStatus.message}`}
+        </div>
+      )}
 
       {/* 3. OUT-OF-THE-BOX FEATURE: THE SILENT REJECTION RADAR */}
       {result.silentRejectionFlags && result.silentRejectionFlags.length > 0 && (
@@ -421,7 +452,7 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
                 }`}>
                   <p className="pr-8 leading-relaxed font-sans">{bullet}</p>
                   <button
-                    onClick={() => copyToClipboard(bullet, 'bullet', idx)}
+                    onClick={() => handleCopy(bullet, 'bullet', idx)}
                     className={`absolute top-2.5 right-2.5 p-1.5 rounded-md border transition ${
                       isDark 
                         ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-400 hover:text-white' 
@@ -450,7 +481,7 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
                 </h3>
               </div>
               <button
-                onClick={() => copyToClipboard(result.applicationBooster?.coldPitchMessage, 'coldPitch')}
+                onClick={() => handleCopy(result.applicationBooster?.coldPitchMessage, 'coldPitch')}
                 className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md bg-purple-600 hover:bg-purple-500 text-white font-medium transition shadow-sm"
               >
                 {copiedColdPitch ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
