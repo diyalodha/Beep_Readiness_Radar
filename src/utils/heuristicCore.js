@@ -116,9 +116,17 @@ export function runDynamicHeuristicAnalysis(studentResumeText = '', jobDescripti
   }
 
   const hasLiveLinks = /(github\.com|vercel\.app|netlify\.app|render\.com|http:\/\/|https:\/\/)/i.test(studentResumeText);
-  const hasMetrics = /(\b\d+%\b|\b\d+k\b|\b\d+ms\b|\breduced\b|\bincreased\b|\boptimized\b|\bwinner\b|\bprocessed\b)/i.test(studentResumeText.toLowerCase());
-  const wordCount = studentResumeText.trim().split(/\s+/).length;
-  const isTooShort = wordCount < 50;
+  const metricMatches = (studentResumeText.match(/\b\d+(\.\d+)?%|\b\d+k\b|\b\d+ms\b|\b\d+\+\b/gi) || []).length;
+  const hasMetrics = metricMatches > 0 || /(\breduced\b|\bincreased\b|\boptimized\b|\bwinner\b|\bprocessed\b)/i.test(studentResumeText.toLowerCase());
+  
+  const actionVerbsList = ['built', 'architected', 'engineered', 'developed', 'designed', 'scaled', 'optimized', 'reduced', 'increased', 'deployed', 'automated', 'integrated', 'implemented', 'refactored'];
+  const lowerResume = studentResumeText.toLowerCase();
+  const detectedVerbs = actionVerbsList.filter(v => new RegExp(`\\b${v}\\b`, 'i').test(lowerResume));
+  const actionVerbCount = detectedVerbs.length;
+
+  const wordCount = studentResumeText.trim().split(/\s+/).filter(Boolean).length;
+  const isTooShort = wordCount < 60;
+  const isOptimalLength = wordCount >= 250 && wordCount <= 750;
 
   const totalDemanded = Math.max(demanded.length, 1);
   const matchRatio = matched.length / totalDemanded;
@@ -155,6 +163,63 @@ export function runDynamicHeuristicAnalysis(studentResumeText = '', jobDescripti
   const roleName = targetRole || 'Internship Candidate';
   const targetCompany = companyName || 'Target Company';
 
+  // Comprehensive ATS Heatmap chips
+  const atsHeatmap = [
+    ...matched.map(s => ({ keyword: s, status: 'matched', label: 'Verified Match', note: 'Direct match found in resume' })),
+    ...transferable.map(t => ({ keyword: t.skill, status: 'transferable', label: `Adjacent (via ${t.via})`, note: `Transferable foundation through ${t.via}` })),
+    ...missing.map(m => ({ keyword: m, status: 'missing', label: 'Missing Filter', note: 'Explicitly demanded in JD; absent in resume' }))
+  ];
+
+  // Evidence-based Filter Checklist
+  const filterChecklist = [
+    {
+      name: 'Core Tech Stack Match',
+      status: matchRatio >= 0.7 ? 'pass' : (matchRatio >= 0.4 ? 'warning' : 'fail'),
+      value: `${Math.round(matchRatio * 100)}%`,
+      detail: `${matched.length} of ${demanded.length} core keywords present`
+    },
+    {
+      name: 'Proof of Work & Code Links',
+      status: hasLiveLinks ? 'pass' : 'fail',
+      value: hasLiveLinks ? 'Verified' : 'Missing',
+      detail: hasLiveLinks ? 'GitHub / Deployment links detected' : 'No GitHub or demo URLs found'
+    },
+    {
+      name: 'Quantifiable Metrics & Impact',
+      status: metricMatches >= 2 ? 'pass' : (metricMatches === 1 ? 'warning' : 'fail'),
+      value: `${metricMatches} metric${metricMatches === 1 ? '' : 's'}`,
+      detail: metricMatches >= 2 ? 'Strong quantified impact' : 'Needs Google XYZ bullet numbers'
+    },
+    {
+      name: 'Document Length & ATS Density',
+      status: isOptimalLength ? 'pass' : (wordCount < 100 ? 'fail' : 'warning'),
+      value: `${wordCount} words`,
+      detail: isOptimalLength ? 'Optimal 1-page density' : (wordCount < 100 ? 'Too sparse for ATS scan' : 'Consider trimming to 1 page')
+    }
+  ];
+
+  // Tailored Interview Questions based on gap
+  const interviewQuestions = [
+    {
+      topic: `${primaryMissingLabel} Fundamentals`,
+      question: `In this ${roleName} role, we rely heavily on ${primaryMissingLabel}. Can you walk us through how you would architect a feature using it, or how you would ramp up on it quickly?`,
+      recruiterIntent: `Recruiters want to verify if your gap in ${primaryMissingLabel} is merely lack of syntax exposure or a fundamental gap in engineering concepts.`,
+      recommendedAnswer: `Anchor to your strongest adjacent skill (${matched[0] || 'core engineering foundation'}): "While I have built primarily with ${matched[0] || 'modern tech'}, the core mental model translates directly. In my previous project, I solved [similar problem] by [action]. Transitioning to ${primaryMissingLabel}, the equivalent pattern is [explain concept]. I am already completing a 48-hour prototype to demonstrate this."`
+    },
+    {
+      topic: 'Handling Failure & Debugging',
+      question: `Tell us about a technical bottleneck or critical bug you encountered in one of your featured projects. How did you diagnose and resolve it?`,
+      recruiterIntent: 'Checks whether you actually wrote the code yourself vs copied a tutorial.',
+      recommendedAnswer: 'Use the STAR format: describe the unexpected behavior (e.g. state synchronization lag, memory leak, API timeout), the debugging tool used (DevTools profiler, network logs), the root cause, and the measurable fix.'
+    },
+    {
+      topic: 'Proof-of-Work Architecture',
+      question: `If you were tasked with building a feature end-to-end for ${targetCompany} in your first two weeks, how would you structure your workflow from design to deployment?`,
+      recruiterIntent: 'Assesses autonomy, git discipline, and readiness to contribute to production sprints.',
+      recommendedAnswer: 'Outline your 4-step process: (1) Clarify requirements & edge cases, (2) Create minimal reproducible prototype with automated tests, (3) Submit clean PR with loom/screenshots, (4) Monitor production deployment.'
+    }
+  ];
+
   return {
     isAIGenerated: false,
     engine: 'Curated Heuristic Engine (Demo Mode)',
@@ -163,7 +228,25 @@ export function runDynamicHeuristicAnalysis(studentResumeText = '', jobDescripti
     matchScore: rawScore,
     readinessLevel,
     badgeColor,
-    resumeStats: { wordCount, hasLiveLinks, hasMetrics, skillsIdentified: matched.length + transferable.length },
+    resumeStats: { 
+      wordCount, 
+      hasLiveLinks, 
+      hasMetrics, 
+      metricMatches, 
+      actionVerbCount, 
+      detectedVerbs,
+      skillsIdentified: matched.length + transferable.length 
+    },
+    detailedStats: {
+      coreSkillMatchPercent: Math.round(matchRatio * 100),
+      atsScreenPassRate: Math.min(95, Math.max(25, Math.round(rawScore * 0.92))),
+      metricMatches,
+      actionVerbCount,
+      detectedVerbs,
+      filterChecklist
+    },
+    atsHeatmap,
+    interviewQuestions,
     silentRejectionFlags,
     scoreBreakdown: {
       mustHaveCoverage: `${Math.round(matchRatio * 100)}%`,
@@ -179,7 +262,9 @@ export function runDynamicHeuristicAnalysis(studentResumeText = '', jobDescripti
     proofOfWorkProject: {
       title: `48-Hour ${primaryMissingLabel.toUpperCase()} Proof Project`,
       deliverable: `Build and deploy a targeted micro-application demonstrating ${primaryMissingLabel}, hosted on Vercel/Render with a clean GitHub README. Only claim metrics you actually measured.`,
-      estimatedHours: '6-8 hours over a weekend'
+      estimatedHours: '6-8 hours over a weekend',
+      architectureOverview: `Frontend client communicating via typed REST/GraphQL endpoints with ${primaryMissingLabel} state layer. Includes CI/CD workflow and automated test verification.`,
+      readmeTemplate: `# ${primaryMissingLabel.toUpperCase()} Proof-of-Work Demo\n\n> Target Role: ${roleName} at ${targetCompany}\n\n## Overview\nProduction prototype demonstrating end-to-end implementation of ${primaryMissingLabel}.\n\n## Tech Stack\n- Core: ${matched[0] || 'Frontend/Backend'}, ${primaryMissingLabel}\n- Deployment: Vercel / Render\n- Testing: Vitest / Jest\n\n## Key Architectural Decisions\n1. Modular component separation for high testability.\n2. Strict input validation and error handling boundaries.\n\n## Getting Started\n\`\`\`bash\nnpm install\nnpm run dev\n\`\`\``
     },
     sevenDayPlan: [
       { day: 'Day 1 & 2', phase: 'Core Concept Immersion', tasks: [

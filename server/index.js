@@ -315,6 +315,17 @@ app.post('/api/applications', (req, res) => {
   return res.json({ ok: true, refId: record.refId, submittedAt: record.submittedAt });
 });
 
+app.get('/api/applications', (req, res) => {
+  const { email } = req.query;
+  const all = readApplications();
+  if (email && typeof email === 'string') {
+    const clean = email.trim().toLowerCase();
+    const filtered = all.filter(a => a.email && a.email.toLowerCase() === clean);
+    return res.json({ applications: filtered });
+  }
+  return res.json({ applications: all });
+});
+
 // ---------- Client-safe analysis fallback (exported for reuse) ----------
 export { runDynamicHeuristicAnalysis };
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { HelpCircle, Info, Sun, Moon, LogOut } from 'lucide-react';
+import { HelpCircle, Info, Sun, Moon, LogOut, Briefcase } from 'lucide-react';
 
-export default function Header({ apiStatus, user, onLogout, theme, toggleTheme }) {
+export default function Header({ apiStatus, user, onLogout, theme, toggleTheme, applicationsCount = 0, onOpenApplications }) {
   const [showInfo, setShowInfo] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -39,9 +39,30 @@ export default function Header({ apiStatus, user, onLogout, theme, toggleTheme }
           </div>
         </div>
 
-        {/* Right Actions: Theme Toggle, Engine Status, User Profile */}
-        <div className="flex items-center gap-2.5">
+        {/* Right Actions: Applications Tracker, Theme Toggle, Engine Status, User Profile */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
           
+          {/* Applications Tracker Pill */}
+          {user && (
+            <button
+              onClick={onOpenApplications}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${
+                isDark
+                  ? 'bg-purple-950/40 hover:bg-purple-900/50 border-purple-500/40 text-purple-200 shadow-sm'
+                  : 'bg-purple-50 hover:bg-purple-100/80 border-purple-200 text-purple-800 shadow-sm'
+              }`}
+              title="View all your submitted internship applications"
+            >
+              <Briefcase className="w-3.5 h-3.5 text-purple-500" />
+              <span className="hidden sm:inline">Applications</span>
+              {applicationsCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-purple-600 text-white text-[10px] font-bold flex items-center justify-center">
+                  {applicationsCount}
+                </span>
+              )}
+            </button>
+          )}
+
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}

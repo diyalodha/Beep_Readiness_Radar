@@ -6,6 +6,7 @@ import InternshipExplorer from './components/InternshipExplorer';
 import ResumeUploader from './components/ResumeUploader';
 import ResultsView from './components/ResultsView';
 import ApplicationModal from './components/ApplicationModal';
+import ApplicationTrackerModal from './components/ApplicationTrackerModal';
 import { INTERNSHIPS } from './data/sampleRoles';
 import { runDynamicHeuristicAnalysis } from './utils/heuristicCore';
 import { AlertTriangle, Sparkles, ArrowRight, RefreshCw } from 'lucide-react';
@@ -23,6 +24,17 @@ export default function App() {
       return savedUser ? JSON.parse(savedUser) : null;
     } catch {
       return null;
+    }
+  });
+
+  // Applications Tracker state
+  const [isApplicationsOpen, setIsApplicationsOpen] = useState(false);
+  const [applications, setApplications] = useState(() => {
+    try {
+      const saved = localStorage.getItem('beep_applications');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
     }
   });
 
@@ -76,6 +88,38 @@ export default function App() {
     setUser(null);
     localStorage.removeItem('beep_user');
     setResult(null);
+  };
+
+  // Sync applications from backend / localStorage for the logged in user
+  useEffect(() => {
+    if (!user?.email) return;
+    fetch(`/api/applications?email=${encodeURIComponent(user.email)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data?.applications && Array.isArray(data.applications)) {
+          setApplications(prev => {
+            const map = new Map();
+            // Merge existing local and server apps by refId
+            for (const app of [...data.applications, ...prev]) {
+              if (app.refId) map.set(app.refId, app);
+            }
+            const merged = Array.from(map.values()).sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+            localStorage.setItem('beep_applications', JSON.stringify(merged));
+            return merged;
+          });
+        }
+      })
+      .catch(err => {
+        console.warn('Could not fetch server applications, relying on local storage:', err);
+      });
+  }, [user]);
+
+  const handleApplicationSubmitted = (newApp) => {
+    setApplications(prev => {
+      const updated = [newApp, ...prev.filter(a => a.refId !== newApp.refId)];
+      localStorage.setItem('beep_applications', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   // Check backend engine status on load
@@ -220,6 +264,8 @@ export default function App() {
         onLogout={handleLogout}
         theme={theme}
         toggleTheme={toggleTheme}
+        applicationsCount={applications.length}
+        onOpenApplications={() => setIsApplicationsOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -314,6 +360,15 @@ export default function App() {
         internship={selectedInternship || { title: customRoleTitle, company: 'Custom Partner' }}
         result={result}
         user={user}
+        theme={theme}
+        onApplicationSubmitted={handleApplicationSubmitted}
+      />
+
+      {/* Applications Tracker Modal */}
+      <ApplicationTrackerModal
+        isOpen={isApplicationsOpen}
+        onClose={() => setIsApplicationsOpen(false)}
+        applications={applications}
         theme={theme}
       />
 
