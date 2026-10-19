@@ -37,10 +37,10 @@ export default function App() {
   const [customRoleTitle, setCustomRoleTitle] = useState('');
   const [customJd, setCustomJd] = useState('');
 
-  // Resume State
-  const [resumeText, setResumeText] = useState(SAMPLE_RESUMES[1].content); // default to Intermediate
-  const [fileName, setFileName] = useState('Priya_Nair_Resume.pdf');
-  const [selectedResumeId, setSelectedResumeId] = useState(SAMPLE_RESUMES[1].id);
+  // Resume State (Empty by default so user sees the dropzone)
+  const [resumeText, setResumeText] = useState('');
+  const [fileName, setFileName] = useState('');
+  const [selectedResumeId, setSelectedResumeId] = useState(null);
 
   // Analysis & Execution State
   const [isLoading, setIsLoading] = useState(false);
@@ -107,6 +107,14 @@ export default function App() {
     setSelectedResumeId(resumeObj.id);
     setResumeText(resumeObj.content);
     setFileName(`${resumeObj.label.replace(/\s+/g, '_')}.pdf`);
+    setErrorMessage('');
+  };
+
+  const handleRemoveResume = () => {
+    setSelectedResumeId(null);
+    setResumeText('');
+    setFileName('');
+    setResult(null);
     setErrorMessage('');
   };
 
@@ -338,6 +346,7 @@ export default function App() {
           setFileName={setFileName}
           selectedResumeId={selectedResumeId}
           onSelectSampleResume={handleSelectSampleResume}
+          onRemoveResume={handleRemoveResume}
           isCustomJob={isCustomJob}
           customJd={customJd}
           setCustomJd={setCustomJd}
@@ -362,6 +371,11 @@ export default function App() {
               <>
                 <RefreshCw className="w-4 h-4 animate-spin text-white" />
                 <span>Auditing {fileName || 'Resume'} against {activeJobTitle}...</span>
+              </>
+            ) : !resumeText.trim() ? (
+              <>
+                <Sparkles className="w-4 h-4 text-slate-400" />
+                <span>Drop a Resume Above to Run Audit</span>
               </>
             ) : (
               <>
