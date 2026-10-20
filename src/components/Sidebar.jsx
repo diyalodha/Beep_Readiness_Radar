@@ -106,12 +106,12 @@ export default function Sidebar({
               </div>
               <div className="leading-tight">
                 <h1 className="text-sm font-black tracking-tight flex items-center gap-1.5">
-                  <span>BeepRadar</span>
+                  <span>EventBeep</span>
                 </h1>
                 <span className={`text-[10px] font-semibold tracking-wide ${
                   isDark ? 'text-slate-400' : 'text-slate-500'
                 }`}>
-                  AI Career OS
+                  Founder's Office • Radar OS
                 </span>
               </div>
             </div>
