@@ -113,6 +113,8 @@ export default function App() {
   };
 
   const handleLogin = (userData, userToken) => {
+    // Clear any previous user's applications immediately to avoid cross-account flash
+    setApplications([]);
     setUser(userData);
     const tokenVal = userToken || '';
     setToken(tokenVal);
@@ -120,25 +122,22 @@ export default function App() {
     if (tokenVal) {
       localStorage.setItem('beep_token', tokenVal);
     }
-
-    // Also persist in local registered students list
-    try {
-      const all = JSON.parse(localStorage.getItem('beep_registered_students') || '[]');
-      const filtered = all.filter(u => u.email?.toLowerCase() !== userData.email?.toLowerCase());
-      localStorage.setItem('beep_registered_students', JSON.stringify([{ ...userData, token: tokenVal }, ...filtered]));
-    } catch {
-      // ignore
-    }
+    // Clean up any legacy multi-token storage for privacy
+    localStorage.removeItem('beep_registered_students');
   };
 
   const handleLogout = () => {
     setUser(null);
     setToken('');
+    setApplications([]);
+    setResult(null);
+    setResumeText('');
+    setFileName('');
+    setErrorMessage('');
     localStorage.removeItem('beep_user');
     localStorage.removeItem('beep_token');
     localStorage.removeItem('beep_applications');
-    setApplications([]);
-    setResult(null);
+    localStorage.removeItem('beep_registered_students');
   };
 
   // Sync applications from backend (strictly authorized by JWT token)
@@ -150,6 +149,11 @@ export default function App() {
       }
     })
       .then(res => {
+        if (res.status === 401) {
+          // Token expired or invalid: force logout
+          handleLogout();
+          throw new Error('Session expired. Please sign in again.');
+        }
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         return res.json();
       })
@@ -160,7 +164,7 @@ export default function App() {
         }
       })
       .catch(err => {
-        console.warn('Could not fetch server applications, relying on local storage cache:', err);
+        console.warn('Could not fetch server applications:', err.message);
       });
   }, [token]);
 

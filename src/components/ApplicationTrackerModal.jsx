@@ -19,22 +19,22 @@ export default function ApplicationTrackerModal({ isOpen, onClose, applications 
 
   const handleDownloadReceipt = (app) => {
     const content = `================================================
-BEEP FAST-TRACK INTERNSHIP APPLICATION RECEIPT
+BEEP INTERNSHIP APPLICATION SUBMISSION RECEIPT
 ================================================
 Reference ID  : ${app.refId}
 Target Role   : ${app.role}
-Hiring Partner: ${app.company || 'Hiring Partner'}
+Target Company: ${app.company || 'Hiring Partner'}
 Applicant     : ${app.name}
 Email         : ${app.email}
 Phone         : ${app.phone || 'N/A'}
-Match Score   : ${app.matchScore !== null ? `${app.matchScore}%` : 'N/A'}
+Readiness Est.: ${app.matchScore !== null ? `${app.matchScore}%` : 'N/A'}
 Submitted At  : ${new Date(app.submittedAt).toLocaleString()}
-Status        : Application Received & Under Review
+Status        : Submitted & Recorded in Beep Database
 
-Current Stage : Stage 2/4 - Resume & Proof-of-Work Verification
-Expected Update: Within 48-72 business hours
-
-Thank you for applying through the Beep Career Platform.
+Platform Notice:
+This receipt verifies that your application has been securely recorded
+in the Beep platform database. Review and callback decisions occur
+during active recruitment cycles conducted by hiring partners.
 ================================================`;
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -45,40 +45,37 @@ Thank you for applying through the Beep Career Platform.
     URL.revokeObjectURL(url);
   };
 
-  // Determine stage progress (simulated dynamic pipeline for visual feedback)
+  // Honest pipeline stages based on real database records
   const getPipelineStages = (app) => {
-    const hasScore = typeof app.matchScore === 'number';
-    const isHighMatch = hasScore && app.matchScore >= 75;
-
     return [
       {
         id: 1,
-        title: 'Application Received',
-        detail: 'Direct submission to Beep Fast-Track Queue',
+        title: 'Application Recorded',
+        detail: 'Stored with cryptographic reference ID in SQLite',
         completed: true,
         current: false,
         time: new Date(app.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       },
       {
         id: 2,
-        title: 'ATS & Proof-of-Work Screened',
-        detail: hasScore ? `Verified with ${app.matchScore}% readiness score` : 'Initial resume verification completed',
+        title: 'Readiness Profile Attached',
+        detail: app.matchScore !== null ? `Attached with ${app.matchScore}% estimated match` : 'Skills profile linked to application',
         completed: true,
-        current: !isHighMatch,
-        time: 'Automated'
+        current: true,
+        time: 'Recorded'
       },
       {
         id: 3,
-        title: 'Hiring Team Review',
-        detail: isHighMatch ? 'Priority candidate fast-track queue' : 'Under review by hiring coordinator',
-        completed: isHighMatch,
-        current: isHighMatch,
-        time: 'In Progress'
+        title: 'Hiring Round Evaluation',
+        detail: 'Queued for partner recruitment batch review',
+        completed: false,
+        current: false,
+        time: 'Awaiting Batch'
       },
       {
         id: 4,
-        title: 'Interview Decision / Callback',
-        detail: 'Shortlist notification & interview scheduling',
+        title: 'Interview Decision',
+        detail: 'Direct shortlist or interview notification',
         completed: false,
         current: false,
         time: 'Pending'

@@ -375,12 +375,19 @@ export default function ResumeUploader({
             </div>
           </div>
 
-          {/* Privacy notice */}
-          <div className={`flex items-start gap-2 text-[11px] mt-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
-            <ShieldCheck className="w-3.5 h-3.5 mt-0.5 shrink-0 text-purple-500" />
-            <p>
-              <span className="font-semibold">Privacy:</span> Your resume text is sent to our analysis engine only to compute a readiness score for you. The server does not log or persist resume contents. Parsed text stays in your browser until you remove it.
-            </p>
+          {/* Privacy & AI Disclosure Notice */}
+          <div className={`p-3.5 rounded-xl border flex items-start gap-2.5 text-[11px] leading-relaxed mt-1 ${
+            isDark ? 'bg-slate-900/40 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
+          }`}>
+            <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0 text-purple-500" />
+            <div className="space-y-1">
+              <p>
+                <span className="font-bold text-slate-200 dark:text-slate-200">Resume Privacy Guarantee:</span> Your resume text is parsed in-memory strictly to evaluate skill alignment against this job description. The server does not log, persist, or retain resume contents in any database.
+              </p>
+              <p className="text-[10px] opacity-80">
+                When Gemini AI is active, text is sent securely over TLS for one-time inference. Resumes are cleared from application memory immediately upon clicking Remove or logging out.
+              </p>
+            </div>
           </div>
 
         </div>

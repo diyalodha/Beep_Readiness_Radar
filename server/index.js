@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { userQueries, applicationQueries } from './db.js';
@@ -17,36 +18,62 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const JWT_SECRET = process.env.JWT_SECRET || 'beep-founder-office-secure-jwt-key-2026';
+
+// --- Security: Fail startup if JWT_SECRET is missing or weak in production ---
+let JWT_SECRET = process.env.JWT_SECRET?.trim();
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[FATAL SECURITY ERROR] JWT_SECRET must be configured with at least 32 characters in production.');
+    process.exit(1);
+  } else {
+    JWT_SECRET = crypto.randomBytes(32).toString('hex');
+    console.warn('[SECURITY NOTICE] No JWT_SECRET set in .env. Generated temporary in-memory 256-bit secret for this development session.');
+  }
+} else if (JWT_SECRET.length < 32 && process.env.NODE_ENV === 'production') {
+  console.error('[FATAL SECURITY ERROR] JWT_SECRET must be at least 32 characters long in production.');
+  process.exit(1);
+}
 
 // --- Security Headers via Helmet ---
-// Configure Helmet to allow Vite dev mode and safe iframe preview of documents
+// Configured with Content Security Policy allowing necessary local development and blob previews
 app.use(helmet({
-  contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false,
-  frameguard: false, // allows same-origin PDF previews in modal
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+      connectSrc: ["'self'", 'http://localhost:5000', 'http://localhost:5173', 'http://127.0.0.1:5173', 'https://generativelanguage.googleapis.com'],
+      frameSrc: ["'self'", 'blob:'], // allows sandboxed PDF preview iframe
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      frameAncestors: ["'self'"]
+    }
+  },
+  crossOriginEmbedderPolicy: false
 }));
 
-// --- CORS: restrict to known development origins ---
-const ALLOWED_ORIGINS = new Set([
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-]);
+// --- CORS: configurable via environment with local development defaults ---
+const defaultOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+const configuredOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean)
+  : defaultOrigins;
+const ALLOWED_ORIGINS = new Set(configuredOrigins);
 
 app.use(cors({
   origin(origin, callback) {
     if (!origin || ALLOWED_ORIGINS.has(origin)) return callback(null, true);
-    return callback(new Error('Origin not allowed by CORS'));
+    return callback(new Error('Origin not allowed by CORS policy'));
   },
   credentials: true,
 }));
 
 app.use(express.json({ limit: '4mb' }));
 
-// --- Rate Limiting ---
+// --- Rate Limiters ---
 const analyzeLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 25,
+  max: 20,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many analysis requests. Please wait a minute and try again.' },
@@ -54,7 +81,7 @@ const analyzeLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 40,
+  max: 30,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many authentication attempts. Please try again after 15 minutes.' },
@@ -74,7 +101,7 @@ export function authMiddleware(req, res, next) {
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Session expired. Please log in again.' });
+      return res.status(401).json({ error: 'Session expired. Please sign in again.' });
     }
     return res.status(401).json({ error: 'Invalid authentication session.' });
   }
@@ -87,43 +114,17 @@ app.get('/api/status', (req, res) => {
   const hasKey = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim());
   res.json({
     status: 'ok',
-    database: 'SQLite (WAL mode)',
-    security: 'JWT + bcrypt + Helmet active',
     aiEnabled: hasKey,
-    engine: hasKey ? 'Gemini 2.5 Flash (Live AI)' : 'Curated Heuristic Engine (Demo Mode)',
-    message: hasKey
-      ? 'Genuine AI analysis engine active via backend Gemini API.'
-      : 'Running in Demo/Heuristic mode. Add GEMINI_API_KEY to server .env for live LLM extraction.'
+    engine: hasKey ? 'Gemini 2.5 Flash (Live AI)' : 'Curated Heuristic Engine (Demo Mode)'
   });
 });
 
 // ==========================================
-// 2. AUTHENTICATION ENDPOINTS
+// 2. AUTHENTICATION ENDPOINTS (NO ACCOUNT ENUMERATION)
 // ==========================================
 
-// Check if an email is registered (for step-by-step UI UX)
-app.post('/api/auth/check-email', (req, res) => {
-  const { email } = req.body || {};
-  if (!email || typeof email !== 'string') {
-    return res.status(400).json({ error: 'email is required' });
-  }
-  const clean = email.trim().toLowerCase();
-  const user = userQueries.findByEmail(clean);
-  if (user) {
-    return res.json({
-      exists: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        college: user.college,
-        graduationYear: user.graduation_year,
-        avatar: user.avatar
-      }
-    });
-  }
-  return res.json({ exists: false });
-});
+// Password policy: minimum 8 characters, at least 1 letter and 1 number
+const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
 
 // Student Registration
 app.post('/api/auth/register', authLimiter, async (req, res) => {
@@ -132,17 +133,18 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
   if (!email || typeof email !== 'string' || !/^\S+@\S+\.\S+$/.test(email.trim())) {
     return res.status(400).json({ error: 'A valid email address is required.' });
   }
-  if (!name || typeof name !== 'string' || !name.trim()) {
-    return res.status(400).json({ error: 'Full name is required.' });
+  if (!name || typeof name !== 'string' || !name.trim() || name.length > 100) {
+    return res.status(400).json({ error: 'Full name is required (up to 100 characters).' });
   }
-  if (!password || typeof password !== 'string' || password.length < 6) {
-    return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+  if (!password || typeof password !== 'string' || !PASSWORD_REGEX.test(password)) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters long and contain both letters and numbers.' });
   }
 
   const cleanEmail = email.trim().toLowerCase();
   const existing = userQueries.findByEmail(cleanEmail);
   if (existing) {
-    return res.status(409).json({ error: 'An account with this email already exists. Please sign in instead.' });
+    // Generic response to mitigate email enumeration
+    return res.status(400).json({ error: 'Unable to complete registration with the provided details. Please try signing in.' });
   }
 
   try {
@@ -151,15 +153,15 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
       email: cleanEmail,
       passwordHash,
       name: name.trim(),
-      college: (college || 'College Student (India)').trim(),
-      graduationYear: (graduationYear || '2026').trim(),
+      college: (college || 'College Student').trim().slice(0, 150),
+      graduationYear: (graduationYear || '2026').trim().slice(0, 50),
       avatar: null
     });
 
     const token = jwt.sign(
       { id: newUser.id, email: newUser.email, name: newUser.name },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '24h' }
     );
 
     return res.status(201).json({
@@ -181,7 +183,7 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
   }
 });
 
-// Student Login
+// Student Login (Constant-time check to prevent timing-based user enumeration)
 app.post('/api/auth/login', authLimiter, async (req, res) => {
   const { email, password } = req.body || {};
 
@@ -191,20 +193,20 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
 
   const cleanEmail = email.trim().toLowerCase();
   const user = userQueries.findByEmail(cleanEmail);
-  if (!user) {
-    // Constant-time style response to prevent email enumeration
-    return res.status(401).json({ error: 'Invalid email or password.' });
-  }
 
-  const passwordMatch = await bcrypt.compare(password, user.password_hash);
-  if (!passwordMatch) {
+  // Constant-time dummy hash comparison to prevent timing-based enumeration
+  const DUMMY_HASH = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+  const hashToCompare = user ? user.password_hash : DUMMY_HASH;
+  const passwordMatch = await bcrypt.compare(password, hashToCompare);
+
+  if (!user || !passwordMatch) {
     return res.status(401).json({ error: 'Invalid email or password.' });
   }
 
   const token = jwt.sign(
     { id: user.id, email: user.email, name: user.name },
     JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '24h' }
   );
 
   return res.json({
@@ -242,90 +244,94 @@ app.get('/api/auth/me', authMiddleware, (req, res) => {
   });
 });
 
-// Backward compatibility helper for legacy lookup
-app.get('/api/users/lookup', (req, res) => {
-  const { email } = req.query;
-  if (!email || typeof email !== 'string') {
-    return res.status(400).json({ error: 'email is required' });
-  }
-  const user = userQueries.findByEmail(email.trim().toLowerCase());
-  if (user) {
-    return res.json({
-      found: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        college: user.college,
-        graduationYear: user.graduation_year,
-        avatar: user.avatar
-      }
-    });
-  }
-  return res.json({ found: false });
-});
-
 // ==========================================
-// 3. APPLICATION TRACKING ENDPOINTS (PROTECTED)
+// 3. APPLICATION TRACKING ENDPOINTS (STRICT ISOLATION)
 // ==========================================
 
 function generateRefId() {
-  const rand = Math.floor(100000 + Math.random() * 900000);
-  const stamp = Date.now().toString(36).slice(-4).toUpperCase();
+  const stamp = Date.now().toString(36).toUpperCase();
+  const rand = crypto.randomBytes(3).toString('hex').toUpperCase();
   return `BEEP-${stamp}-${rand}`;
 }
 
 // Submit a new application (Strictly bound to authenticated student)
 app.post('/api/applications', authMiddleware, (req, res) => {
-  const { name, phone, githubUrl, role, company, matchScore } = req.body || {};
+  const { phone, githubUrl, role, company, matchScore } = req.body || {};
   const errors = [];
 
-  if (typeof name !== 'string' || !name.trim()) errors.push('Applicant name is required');
-  if (typeof phone !== 'string' || phone.trim().length < 6) errors.push('Valid phone number is required');
-  if (typeof role !== 'string' || !role.trim()) errors.push('Role is required');
-  if (githubUrl !== undefined && githubUrl !== '' && typeof githubUrl !== 'string') {
-    errors.push('githubUrl must be a string');
+  // Strictly bind name and email to authenticated session
+  const name = req.user.name;
+  const email = req.user.email;
+
+  if (typeof role !== 'string' || !role.trim() || role.length > 100) {
+    errors.push('Role is required (max 100 characters)');
   }
+  if (typeof company !== 'string' || !company.trim() || company.length > 100) {
+    errors.push('Company is required (max 100 characters)');
+  }
+
+  const cleanPhone = (phone || '').toString().replace(/[\s-]/g, '');
+  if (!/^\+?[0-9]{10,15}$/.test(cleanPhone)) {
+    errors.push('Valid phone number is required (10-15 digits)');
+  }
+
+  if (githubUrl && typeof githubUrl === 'string' && githubUrl.trim()) {
+    const cleanUrl = githubUrl.trim();
+    if (!/^https?:\/\/[^\s$.?#].[^\s]*$/i.test(cleanUrl)) {
+      errors.push('GitHub URL must be a valid HTTP or HTTPS link');
+    }
+  }
+
   if (matchScore !== undefined && matchScore !== null && (typeof matchScore !== 'number' || matchScore < 0 || matchScore > 100)) {
     errors.push('matchScore must be a number between 0 and 100');
   }
 
   if (errors.length > 0) {
-    return res.status(400).json({ error: 'Invalid application payload', details: errors });
+    return res.status(400).json({ error: 'Validation failed', details: errors });
   }
 
-  const refId = generateRefId();
-
-  try {
-    const record = applicationQueries.createApplication({
-      refId,
-      userId: req.user.id,
-      userEmail: req.user.email,
-      name: name.trim(),
-      phone: phone.trim(),
-      githubUrl: (githubUrl || '').trim(),
-      role: role.trim(),
-      company: (company || 'Hiring Partner').trim(),
-      matchScore: typeof matchScore === 'number' ? matchScore : null
-    });
-
-    return res.status(201).json({
-      ok: true,
-      refId: record.ref_id,
-      submittedAt: record.submitted_at,
-      status: record.status
-    });
-  } catch (err) {
-    console.error('Failed to persist application:', err);
-    return res.status(500).json({ error: 'Could not save application to the database.' });
+  let record = null;
+  let attempts = 0;
+  while (!record && attempts < 5) {
+    try {
+      const refId = generateRefId();
+      record = applicationQueries.createApplication({
+        refId,
+        userId: req.user.id,
+        userEmail: email,
+        name: name,
+        phone: cleanPhone,
+        githubUrl: (githubUrl || '').trim(),
+        role: role.trim(),
+        company: company.trim(),
+        matchScore: typeof matchScore === 'number' ? matchScore : null
+      });
+    } catch (err) {
+      if (err.message && err.message.includes('UNIQUE constraint failed')) {
+        attempts++;
+      } else {
+        console.error('Failed to persist application:', err);
+        return res.status(500).json({ error: 'Could not save application to the database.' });
+      }
+    }
   }
+
+  if (!record) {
+    return res.status(500).json({ error: 'Failed to generate unique application ID. Please retry.' });
+  }
+
+  return res.status(201).json({
+    ok: true,
+    refId: record.ref_id,
+    submittedAt: record.submitted_at,
+    status: record.status
+  });
 });
 
 // Get applications (STRICT ISOLATION: returns ONLY the authenticated user's records)
 app.get('/api/applications', authMiddleware, (req, res) => {
   try {
     const apps = applicationQueries.listByUserId(req.user.id);
-    // Format response objects cleanly
     const formatted = apps.map(a => ({
       refId: a.ref_id,
       name: a.name,
@@ -373,23 +379,33 @@ function validateAnalyzeBody(body) {
   return errors;
 }
 
+// Comprehensive Schema Validator for AI Output
 function validateAIResult(data) {
   if (!data || typeof data !== 'object') return 'Response is not an object.';
   if (typeof data.matchScore !== 'number' || Number.isNaN(data.matchScore) || data.matchScore < 0 || data.matchScore > 100) {
     return 'matchScore must be a number between 0 and 100.';
+  }
+  if (typeof data.targetRole !== 'string' || typeof data.company !== 'string') {
+    return 'targetRole and company must be strings.';
   }
   if (!data.skillsBreakdown || typeof data.skillsBreakdown !== 'object') {
     return 'skillsBreakdown is missing.';
   }
   for (const key of ['matched', 'transferable', 'missingCritical']) {
     if (!Array.isArray(data.skillsBreakdown[key])) return `skillsBreakdown.${key} must be an array.`;
-    if (data.skillsBreakdown[key].length > 100) return `skillsBreakdown.${key} is too large.`;
+    if (data.skillsBreakdown[key].length > 100) return `skillsBreakdown.${key} exceeds size limit.`;
+    for (const item of data.skillsBreakdown[key]) {
+      if (typeof item !== 'string') return `skillsBreakdown.${key} items must be strings.`;
+    }
   }
   if (!Array.isArray(data.sevenDayPlan) || data.sevenDayPlan.length < 1) {
     return 'sevenDayPlan must be an array with at least one entry.';
   }
-  if (typeof data.targetRole !== 'string' || typeof data.company !== 'string') {
-    return 'targetRole and company must be strings.';
+  for (const dayEntry of data.sevenDayPlan) {
+    if (typeof dayEntry !== 'object' || typeof dayEntry.day !== 'string' || typeof dayEntry.phase !== 'string') {
+      return 'sevenDayPlan entries must have day and phase strings.';
+    }
+    if (!Array.isArray(dayEntry.tasks)) return 'sevenDayPlan tasks must be an array.';
   }
   return null;
 }
@@ -415,14 +431,13 @@ app.post('/api/analyze', analyzeLimiter, async (req, res) => {
 
   try {
     const prompt = `
-You are a senior hiring partner and career mentor for Beep, an AI career platform for college students in India.
-Analyze this student's actual resume against the target internship job description.
-Calculate a strictly DYNAMIC score that genuinely reflects whether the resume is beginner, intermediate, or advanced for this role.
+You are a career mentor for Beep, evaluating an Indian college student's resume against an internship job description.
+Calculate an honest match score that accurately reflects whether the candidate has the required technical stack.
 
-IMPORTANT RULES:
-- Do NOT invent metrics, percentages, or achievements the candidate did not state.
+IMPORTANT CONSTRAINTS:
+- Do NOT invent metrics, percentages, or achievements the candidate did not explicitly state.
 - When suggesting resume bullets, use bracketed placeholders like [X]%, [N] tests, [Y]% uptime so the student fills in real numbers.
-- Only describe recruiter/ATS behavior as general industry observation, never as a guaranteed outcome.
+- Do NOT claim you verified external code or live links; only evaluate what is written in the text.
 
 STUDENT RESUME CONTENT:
 ${studentSkills}
@@ -453,20 +468,20 @@ Respond strictly with valid JSON without any markdown formatting or backticks:
     {
       "type": "critical | warning | pass",
       "title": "Clear short flag title",
-      "description": "Specific explanation of why an ATS or Indian tech recruiter might flag or pass this"
+      "description": "Specific explanation of why an ATS or recruiter might flag or pass this"
     }
   ],
   "scoreBreakdown": {
-    "mustHaveCoverage": "Percentage of non-negotiable skills possessed",
+    "mustHaveCoverage": "Percentage of required skills possessed",
     "transferableBonus": "Bonus potential from related skills",
-    "riskFactor": "Why automated ATS or recruiters might drop this resume"
+    "riskFactor": "Areas where the resume lacks required keywords"
   },
   "skillsBreakdown": {
     "matched": ["SKILL1", "SKILL2"],
     "transferable": ["SKILL3 (Bridgeable)"],
     "missingCritical": ["MISSING_SKILL1", "MISSING_SKILL2"]
   },
-  "recruiterInsight": "Direct, empathetic 2-sentence explanation of what an Indian tech/startup recruiter will typically notice when reading this specific resume for this role.",
+  "recruiterInsight": "Direct, empathetic 2-sentence explanation of what a recruiter typically notices when reading this specific resume for this role.",
   "proofOfWorkProject": {
     "title": "Clear Name for a 48-Hour Micro Project",
     "deliverable": "Specific description of what the student should build over a weekend to prove the #1 missing skill. Only claim metrics the student actually measures.",
@@ -486,7 +501,7 @@ Respond strictly with valid JSON without any markdown formatting or backticks:
       "Another bullet using [Y] placeholders",
       "Third bullet using [N]/[M] placeholders"
     ],
-    "coldPitchMessage": "A concise 4-sentence high-intent LinkedIn DM template with bracketed fields the student fills in."
+    "coldPitchMessage": "A concise 4-sentence high-intent outreach template with bracketed fields the student fills in."
   }
 }
 `;
@@ -498,7 +513,7 @@ Respond strictly with valid JSON without any markdown formatting or backticks:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3, responseMimeType: 'application/json' }
+          generationConfig: { temperature: 0.2, responseMimeType: 'application/json' }
         }),
         signal: controller.signal
       }
@@ -507,7 +522,7 @@ Respond strictly with valid JSON without any markdown formatting or backticks:
 
     if (!response.ok) {
       const fallbackResult = runDynamicHeuristicAnalysis(studentSkills, jobDescription, targetRole, companyName);
-      fallbackResult.fallbackNotice = `Gemini API returned ${response.status}. Showing heuristic results instead.`;
+      fallbackResult.fallbackNotice = `Gemini API returned status ${response.status}. Evaluated using offline heuristic engine.`;
       return res.json(fallbackResult);
     }
 
@@ -521,7 +536,7 @@ Respond strictly with valid JSON without any markdown formatting or backticks:
     const validationError = validateAIResult(parsedData);
     if (validationError) {
       const fallbackResult = runDynamicHeuristicAnalysis(studentSkills, jobDescription, targetRole, companyName);
-      fallbackResult.fallbackNotice = `AI response failed schema validation (${validationError}). Falling back to heuristic engine.`;
+      fallbackResult.fallbackNotice = `AI output failed validation (${validationError}). Showing heuristic match results.`;
       return res.json(fallbackResult);
     }
 
@@ -533,10 +548,10 @@ Respond strictly with valid JSON without any markdown formatting or backticks:
     });
   } catch (error) {
     clearTimeout(timeoutHandle);
-    const reason = error.name === 'AbortError' ? 'Gemini API timed out after 15 seconds.' : 'Live AI error occurred.';
-    console.error('Error during AI analysis, invoking fallback:', error);
+    const reason = error.name === 'AbortError' ? 'Gemini API timed out after 15 seconds.' : 'AI provider connection error.';
+    console.error('Error during AI analysis, invoking fallback:', error.message);
     const fallbackResult = runDynamicHeuristicAnalysis(studentSkills, jobDescription, targetRole, companyName);
-    fallbackResult.fallbackNotice = `${reason} Fallback dynamic heuristic analysis loaded.`;
+    fallbackResult.fallbackNotice = `${reason} Showing heuristic match estimate instead.`;
     return res.json(fallbackResult);
   }
 });
@@ -545,7 +560,7 @@ export { runDynamicHeuristicAnalysis };
 
 app.listen(PORT, () => {
   console.log(`[Beep Server] Backend API running at http://localhost:${PORT}`);
-  console.log(`[Beep Server] Database: SQLite persistent storage active at server/data/beep.db`);
-  console.log(`[Beep Server] Security: JWT authentication + Helmet headers active`);
-  console.log(`[Beep Server] Mode: ${process.env.GEMINI_API_KEY ? 'Live Gemini AI' : 'Demo / Dynamic Heuristic Mode'}`);
+  console.log(`[Beep Server] Persistence: SQLite active with WAL journal mode`);
+  console.log(`[Beep Server] Security: JWT sessions active, Helmet CSP enabled`);
+  console.log(`[Beep Server] Mode: ${process.env.GEMINI_API_KEY ? 'Live Gemini AI' : 'Curated Heuristic Engine'}`);
 });

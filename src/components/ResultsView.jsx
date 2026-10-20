@@ -80,15 +80,15 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
   });
 
   const detailedStats = result.detailedStats || {
-    coreSkillMatchPercent: Math.round((result.matchScore || 65) * 0.9),
-    atsScreenPassRate: Math.round((result.matchScore || 65) * 0.88),
-    metricMatches: result.resumeStats?.metricMatches || (result.resumeStats?.hasMetrics ? 2 : 0),
-    actionVerbCount: result.resumeStats?.actionVerbCount || 5,
+    coreSkillMatchPercent: result.matchScore || 0,
+    estimatedReadinessIndicator: result.matchScore || 0,
+    metricMatches: result.resumeStats?.metricMatches ?? (result.resumeStats?.hasMetrics ? 1 : 0),
+    actionVerbCount: result.resumeStats?.actionVerbCount ?? 0,
     filterChecklist: [
-      { name: 'Core Tech Stack Match', status: 'pass', value: '75%', detail: 'Primary required keywords identified' },
-      { name: 'Proof of Work Links', status: result.resumeStats?.hasLiveLinks ? 'pass' : 'fail', value: result.resumeStats?.hasLiveLinks ? 'Verified' : 'Missing', detail: result.resumeStats?.hasLiveLinks ? 'Live demo or GitHub detected' : 'No verifiable URLs' },
-      { name: 'Metric-Driven Impact', status: result.resumeStats?.hasMetrics ? 'pass' : 'warning', value: `${result.resumeStats?.hasMetrics ? 2 : 0} metrics`, detail: 'Quantified accomplishments in bullets' },
-      { name: 'Document ATS Format', status: 'pass', value: `${result.resumeStats?.wordCount || 120} words`, detail: 'Optimal single-page length' }
+      { name: 'Core Tech Stack Match', status: result.matchScore >= 70 ? 'pass' : (result.matchScore >= 40 ? 'warning' : 'fail'), value: `${result.matchScore || 0}%`, detail: 'Percentage of target keywords detected' },
+      { name: 'Project Links in Resume', status: result.resumeStats?.hasLiveLinks ? 'pass' : 'fail', value: result.resumeStats?.hasLiveLinks ? 'Detected' : 'Not Found', detail: result.resumeStats?.hasLiveLinks ? 'Links detected (manual verification required)' : 'No project URLs found' },
+      { name: 'Quantified Metrics', status: (result.resumeStats?.metricMatches || 0) > 0 ? 'pass' : 'warning', value: `${result.resumeStats?.metricMatches || 0} metrics`, detail: 'Quantified bullet numbers' },
+      { name: 'Document Word Count', status: 'pass', value: `${result.resumeStats?.wordCount || 0} words`, detail: 'Extracted resume text density' }
     ]
   };
 
@@ -279,18 +279,18 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
             isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
           }`}>
             <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              ATS Screen Pass Rate
+              Resume Readiness Indicator
             </span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-2xl font-black text-purple-600 dark:text-purple-400">
-                {detailedStats.atsScreenPassRate}%
+                {detailedStats.estimatedReadinessIndicator ?? detailedStats.coreSkillMatchPercent ?? result.matchScore}%
               </span>
-              <span className="text-[10px] text-emerald-500 font-semibold">
-                Estimated
+              <span className="text-[10px] text-purple-500 font-semibold">
+                Heuristic
               </span>
             </div>
             <p className={`text-[10px] mt-1 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Based on keyword density
+              Estimated keyword coverage
             </p>
           </div>
 
@@ -305,7 +305,7 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
                 {detailedStats.coreSkillMatchPercent}%
               </span>
               <span className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                of JD keywords
+                of required stack
               </span>
             </div>
             <p className={`text-[10px] mt-1 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -324,11 +324,11 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
                 {detailedStats.metricMatches}
               </span>
               <span className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                found
+                detected
               </span>
             </div>
             <p className={`text-[10px] mt-1 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Numbers, %, or metrics
+              Numeric achievement metrics
             </p>
           </div>
 
@@ -336,18 +336,18 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
             isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
           }`}>
             <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Power Action Verbs
+              Distinct Action Verbs
             </span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-2xl font-black text-amber-500">
                 {detailedStats.actionVerbCount}
               </span>
               <span className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                detected
+                unique verbs
               </span>
             </div>
             <p className={`text-[10px] mt-1 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Engineered, built, scaled
+              Action-oriented verbs
             </p>
           </div>
 
