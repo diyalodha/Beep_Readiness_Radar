@@ -19,36 +19,36 @@ export default function StatisticsModal({
   const isDark = theme === 'dark';
 
   const placementBenchmarks = [
-    { role: 'Frontend Engineer Intern', targetMatch: '78%', avgSalary: '₹25k-45k/mo', keyFilter: 'React, TypeScript, Next.js, Live Link' },
-    { role: 'Fullstack Developer Intern', targetMatch: '80%', avgSalary: '₹30k-50k/mo', keyFilter: 'Fullstack MERN/PERN, Docker, REST' },
-    { role: 'AI / GenAI Engineering Intern', targetMatch: '85%', avgSalary: '₹40k-65k/mo', keyFilter: 'Python, RAG, LangChain, Vector DBs' },
-    { role: 'Backend Engineering Intern', targetMatch: '82%', avgSalary: '₹30k-55k/mo', keyFilter: 'SQL, Redis, Microservices, System Design' },
-    { role: 'Product & Growth Analyst', targetMatch: '75%', avgSalary: '₹25k-40k/mo', keyFilter: 'SQL, Power BI, Funnel Metrics, PRDs' },
+    { role: 'Frontend Engineer Intern', targetMatch: '75-80%', avgSalary: '₹25k-45k/mo', keyFilter: 'React, TypeScript, Next.js, Live Link' },
+    { role: 'Fullstack Developer Intern', targetMatch: '75-85%', avgSalary: '₹30k-50k/mo', keyFilter: 'Fullstack MERN/PERN, Docker, REST' },
+    { role: 'AI / GenAI Engineering Intern', targetMatch: '80-85%', avgSalary: '₹40k-65k/mo', keyFilter: 'Python, RAG, LangChain, Vector DBs' },
+    { role: 'Backend Engineering Intern', targetMatch: '80-85%', avgSalary: '₹30k-55k/mo', keyFilter: 'SQL, Redis, Microservices, System Design' },
+    { role: 'Product & Growth Analyst', targetMatch: '70-80%', avgSalary: '₹25k-40k/mo', keyFilter: 'SQL, Power BI, Funnel Metrics, PRDs' },
   ];
 
   const disqualifiers = [
     {
-      pct: '74%',
+      indicator: 'Priority 1',
       title: 'Missing Verifiable Proof-of-Work',
-      desc: 'Listing projects without live deployment (Vercel/Render) or active GitHub repos leads to instant recruiter skips.',
+      desc: 'Listing projects without live deployments (e.g. Vercel, Render) or active GitHub repos makes technical verification difficult during initial recruiter screening.',
       severity: 'critical'
     },
     {
-      pct: '68%',
-      title: 'Zero Quantified Metrics (Passive Bullets)',
-      desc: 'Writing "Worked on website" instead of Google XYZ ("Built 6 dashboards, increasing user session duration by [X]%").',
+      indicator: 'Priority 2',
+      title: 'Unquantified Impact Statements',
+      desc: 'Listing passive task descriptions instead of measurable impact (e.g. "Built dashboard" vs. "Engineered 4 dashboards, reducing report generation time by 35%").',
       severity: 'critical'
     },
     {
-      pct: '61%',
-      title: 'Keyword Mismatch with Job Description',
-      desc: 'Failing to include canonical tech stack requirements that automated ATS screening tools filter for.',
+      indicator: 'Priority 3',
+      title: 'Keyword Gaps Against Target Job Description',
+      desc: 'Omitting canonical tech stack requirements, core libraries, or tools explicitly called out in the job description.',
       severity: 'warning'
     },
     {
-      pct: '52%',
-      title: 'Academic-Only or Obsolete Tech Stack',
-      desc: 'Listing college lab coursework (e.g. C/C++ command line apps) instead of modern production frameworks.',
+      indicator: 'Priority 4',
+      title: 'Academic-Only or Non-Production Scope',
+      desc: 'Highlighting introductory classroom exercises rather than end-to-end, full-lifecycle applications or modern frameworks.',
       severity: 'warning'
     }
   ];
@@ -70,15 +70,15 @@ export default function StatisticsModal({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-extrabold tracking-tight">Placement & Candidate Statistics</h2>
+                <h2 className="text-lg font-extrabold tracking-tight">Placement & Candidate Analytics</h2>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                   isDark ? 'bg-purple-950/60 border-purple-500/40 text-purple-300' : 'bg-purple-50 border-purple-200 text-purple-700'
                 }`}>
-                  Live Analytics
+                  Readiness Guide
                 </span>
               </div>
               <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Personal student readiness metrics and verified 2026 campus hiring benchmarks.
+                Personal student readiness metrics and illustrative campus hiring guidelines.
               </p>
             </div>
           </div>
@@ -123,7 +123,7 @@ export default function StatisticsModal({
             }`}
           >
             <Award className="w-3.5 h-3.5" />
-            <span>Campus Hiring Benchmarks (2026)</span>
+            <span>Campus Hiring Guidelines (Illustrative)</span>
           </button>
         </div>
 
@@ -201,7 +201,7 @@ export default function StatisticsModal({
                   </span>
                   <span className="text-xs font-bold block mt-1">Matched Skills</span>
                   <p className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Verified against target JD
+                    Audited against target JD
                   </p>
                 </div>
 
@@ -259,7 +259,7 @@ export default function StatisticsModal({
                   {result.skillsBreakdown?.matched?.length > 0 && (
                     <div className="pt-2">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
-                        Your Verified Core Strengths:
+                        Matched Core Strengths:
                       </span>
                       <div className="flex flex-wrap gap-1.5">
                         {result.skillsBreakdown.matched.map((skill, idx) => (
@@ -316,57 +316,70 @@ export default function StatisticsModal({
           {activeTab === 'market' && (
             <div className="space-y-6 animate-fadeIn">
               
+              {/* Guidelines Disclaimer */}
+              <div className={`p-3 rounded-xl border text-[11px] flex items-start gap-2.5 ${
+                isDark ? 'bg-slate-950/60 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-600'
+              }`}>
+                <Sparkles className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Illustrative Guidelines:</strong> Market targets and recruiter observations shown below are educational guidelines compiled from general tech hiring observations and campus recruitment practices, not internal audited platform statistics.
+                </span>
+              </div>
+
               {/* Key Metric Highlights */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className={`p-3.5 rounded-2xl border text-center ${
                   isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
                 }`}>
-                  <span className="text-2xl sm:text-3xl font-black text-rose-500 block">6 sec</span>
-                  <span className="text-xs font-bold block mt-1">Glance Time</span>
+                  <span className="text-2xl sm:text-3xl font-black text-rose-500 block">~6-8s</span>
+                  <span className="text-xs font-bold block mt-1">Initial Scan</span>
                   <p className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Average recruiter review time
+                    Typical recruiter scan time
                   </p>
                 </div>
 
                 <div className={`p-3.5 rounded-2xl border text-center ${
                   isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
                 }`}>
-                  <span className="text-2xl sm:text-3xl font-black text-amber-500 block">74%</span>
-                  <span className="text-xs font-bold block mt-1">Drop Rate</span>
+                  <span className="text-2xl sm:text-3xl font-black text-amber-500 block">High</span>
+                  <span className="text-xs font-bold block mt-1">Proof Value</span>
                   <p className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Resumes lacking live proof
+                    Priority on live links & repos
                   </p>
                 </div>
 
                 <div className={`p-3.5 rounded-2xl border text-center ${
                   isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
                 }`}>
-                  <span className="text-2xl sm:text-3xl font-black text-emerald-500 block">3.4x</span>
-                  <span className="text-xs font-bold block mt-1">Callback Boost</span>
+                  <span className="text-2xl sm:text-3xl font-black text-emerald-500 block">Measurable</span>
+                  <span className="text-xs font-bold block mt-1">Impact Lift</span>
                   <p className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    With 48-hr proof project
+                    Quantified outcomes boost clarity
                   </p>
                 </div>
 
                 <div className={`p-3.5 rounded-2xl border text-center ${
                   isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
                 }`}>
-                  <span className="text-2xl sm:text-3xl font-black text-purple-600 dark:text-purple-400 block">85%+</span>
-                  <span className="text-xs font-bold block mt-1">Target ATS Score</span>
+                  <span className="text-2xl sm:text-3xl font-black text-purple-600 dark:text-purple-400 block">75-80%+</span>
+                  <span className="text-xs font-bold block mt-1">Target Match</span>
                   <p className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    To clear automated screening
+                    Keyword alignment guideline
                   </p>
                 </div>
               </div>
 
               {/* Top 4 Silent Disqualifiers */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-1">
                   <ShieldAlert className="w-4 h-4 text-rose-500" />
                   <h3 className="text-xs font-bold uppercase tracking-wider">
-                    Top 4 Silent Rejection Reasons in Campus Tech Hiring
+                    Top 4 Common Screening Pitfalls in Early-Career Tech Hiring
                   </h3>
                 </div>
+                <p className={`text-[11px] mb-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Illustrative observations based on recruiter screening feedback & candidate reviews
+                </p>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {disqualifiers.map((item, idx) => (
@@ -378,10 +391,12 @@ export default function StatisticsModal({
                           : (isDark ? 'bg-amber-950/20 border-amber-900/40' : 'bg-amber-50/60 border-amber-200')
                       }`}
                     >
-                      <span className={`text-xl font-black shrink-0 ${
-                        item.severity === 'critical' ? 'text-rose-500' : 'text-amber-500'
+                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md shrink-0 border ${
+                        item.severity === 'critical'
+                          ? (isDark ? 'bg-rose-950/60 text-rose-300 border-rose-800/60' : 'bg-rose-100 text-rose-700 border-rose-200')
+                          : (isDark ? 'bg-amber-950/60 text-amber-300 border-amber-800/60' : 'bg-amber-100 text-amber-700 border-amber-200')
                       }`}>
-                        {item.pct}
+                        {item.indicator}
                       </span>
                       <div>
                         <h4 className="text-xs font-bold leading-tight">{item.title}</h4>
@@ -398,12 +413,15 @@ export default function StatisticsModal({
 
               {/* Role-by-Role Target Benchmarks */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-1">
                   <Award className="w-4 h-4 text-purple-500" />
                   <h3 className="text-xs font-bold uppercase tracking-wider">
-                    Target Readiness Benchmarks by Internship Domain
+                    Illustrative Readiness Targets by Internship Domain
                   </h3>
                 </div>
+                <p className={`text-[11px] mb-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Educational reference targets based on typical market expectations
+                </p>
 
                 <div className={`border rounded-2xl overflow-hidden ${
                   isDark ? 'border-slate-800' : 'border-slate-200'
@@ -414,8 +432,8 @@ export default function StatisticsModal({
                     }`}>
                       <tr>
                         <th className="p-3">Target Role</th>
-                        <th className="p-3">ATS Threshold</th>
-                        <th className="p-3">Campus Stipend</th>
+                        <th className="p-3">Target Alignment</th>
+                        <th className="p-3">Market Stipend Range</th>
                         <th className="p-3 hidden sm:table-cell">Key Recruiter Filter</th>
                       </tr>
                     </thead>
@@ -446,9 +464,9 @@ export default function StatisticsModal({
               }`}>
                 <Sparkles className="w-5 h-5 text-purple-500 shrink-0" />
                 <div className="text-xs leading-relaxed">
-                  <span className="font-bold block">How Beep Readiness Radar Bridges the Gap:</span>
+                  <span className="font-bold block">How Beep Readiness Radar Supports Preparation:</span>
                   <p className="opacity-90 mt-0.5 text-[11px]">
-                    By identifying your exact missing keywords and giving you a concrete 48-hour proof project with Google XYZ bullets, Beep shifts your resume from the 74% auto-drop pile to the top 15% interview shortlist.
+                    By identifying missing domain keywords and guiding you to structure verifiable proof-of-work with quantified impact statements, Beep helps strengthen your application readiness before submitting to hiring teams.
                   </p>
                 </div>
               </div>
@@ -462,7 +480,7 @@ export default function StatisticsModal({
         <div className={`p-4 border-t flex items-center justify-between text-xs ${
           isDark ? 'border-slate-800 bg-slate-950/40 text-slate-400' : 'border-slate-100 bg-slate-50/70 text-slate-500'
         }`}>
-          <span>Beep AI Career Platform • Data verified against campus recruiting cycles</span>
+          <span>Beep Readiness Radar • Illustrative industry guidelines for career preparation</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 rounded-xl font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-sm transition cursor-pointer"

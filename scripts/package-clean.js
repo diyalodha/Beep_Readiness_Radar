@@ -31,7 +31,8 @@ const INCLUDED_FILES = [
 const INCLUDED_DIRS = [
   'src',
   'tests',
-  'server'
+  'server',
+  'scripts'
 ];
 
 // Copy individual files

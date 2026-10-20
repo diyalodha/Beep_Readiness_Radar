@@ -23,6 +23,8 @@ d:\EventBeep_Founder's_Office
 ├── .env.example              # Environment configuration template
 ├── package.json              # Scripts, dependencies, and test runner
 ├── vite.config.js            # Vite build configuration with /api proxy to port 5000
+├── scripts/
+│   └── package-clean.js      # Clean distribution ZIP generator (excludes node_modules, .git, .env, DBs)
 ├── tests/
 │   ├── auth_and_api.test.js  # Automated authentication & database isolation tests
 │   └── heuristicCore.test.js # Boundary-aware skill collision tests (Java vs JS, C vs CSS, etc.)
@@ -72,7 +74,8 @@ d:\EventBeep_Founder's_Office
 
 ### 2. Install Dependencies
 ```bash
-npm install
+npm ci
+# Or: npm install
 ```
 
 ### 3. Configure Environment Variables
@@ -103,7 +106,7 @@ npm run dev
   ```bash
   npm test
   ```
-  *(13/13 passing tests: boundary-aware regex collisions, bcrypt hashing, JWT issuance, SQLite isolation)*
+  *(18/18 passing tests: boundary-aware regex collisions, bcrypt hashing, JWT issuance, SQLite isolation)*
 - **Linter Check:**
   ```bash
   npm run lint
@@ -114,6 +117,11 @@ npm run dev
   npm run build
   ```
   *(Vite production build verified in <1s)*
+- **Clean Distributable Packaging:**
+  ```bash
+  npm run pack:clean
+  ```
+  *(Generates `eventbeep-founder-office-clean.zip` excluding node_modules, .git, .env, and local database records)*
 
 ---
 

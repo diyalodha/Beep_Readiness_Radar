@@ -431,7 +431,7 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
                 </div>
 
                 <div className="mt-2.5 pt-2 border-t border-current/10 text-[10px] font-mono font-bold uppercase tracking-wider">
-                  {flag.type === 'critical' && '⚠️ High Risk of Silent Auto-Drop'}
+                  {flag.type === 'critical' && '⚠️ High Screening Risk (Critical Gap)'}
                   {flag.type === 'warning' && '⚡ Fix Recommended Before Applying'}
                   {flag.type === 'pass' && '✅ Recruiter Check Passed'}
                 </div>
