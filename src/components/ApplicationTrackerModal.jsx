@@ -29,12 +29,12 @@ Email         : ${app.email}
 Phone         : ${app.phone || 'N/A'}
 Readiness Est.: ${app.matchScore !== null ? `${app.matchScore}%` : 'N/A'}
 Submitted At  : ${new Date(app.submittedAt).toLocaleString()}
-Status        : Submitted & Recorded in Beep Database
+Status        : Submitted to Beep — Awaiting Update
 
 Platform Notice:
-This receipt verifies that your application has been securely recorded
-in the Beep platform database. Review and callback decisions occur
-during active recruitment cycles conducted by hiring partners.
+This receipt confirms that your application has been successfully
+recorded in the Beep platform database. Any future status updates
+will be reflected directly in your Beep application tracker.
 ================================================`;
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -45,37 +45,37 @@ during active recruitment cycles conducted by hiring partners.
     URL.revokeObjectURL(url);
   };
 
-  // Honest pipeline stages based on real database records
+  // Honest pipeline stages based on real platform events
   const getPipelineStages = (app) => {
     return [
       {
         id: 1,
-        title: 'Application Recorded',
-        detail: 'Stored with cryptographic reference ID in SQLite',
+        title: 'Submitted to Beep',
+        detail: 'Application received and stored with unique reference ID',
         completed: true,
         current: false,
         time: new Date(app.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       },
       {
         id: 2,
-        title: 'Readiness Profile Attached',
-        detail: app.matchScore !== null ? `Attached with ${app.matchScore}% estimated match` : 'Skills profile linked to application',
+        title: 'Readiness Profile Stored',
+        detail: app.matchScore !== null ? `Saved with ${app.matchScore}% estimated technical match` : 'Resume skills profile linked to record',
         completed: true,
         current: true,
-        time: 'Recorded'
+        time: 'Confirmed'
       },
       {
         id: 3,
-        title: 'Hiring Round Evaluation',
-        detail: 'Queued for partner recruitment batch review',
+        title: 'Awaiting Update',
+        detail: 'Stored in Beep database; awaiting platform review or status change',
         completed: false,
         current: false,
-        time: 'Awaiting Batch'
+        time: 'Queued'
       },
       {
         id: 4,
-        title: 'Interview Decision',
-        detail: 'Direct shortlist or interview notification',
+        title: 'Status Update / Callback',
+        detail: 'Direct status change or review notification',
         completed: false,
         current: false,
         time: 'Pending'

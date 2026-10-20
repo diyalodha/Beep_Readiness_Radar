@@ -17,6 +17,7 @@ dist-ssr
 
 # Runtime data (submitted applications with personal info — never commit)
 server/data/
+*.zip
 
 # Editor directories and files
 .vscode/*
