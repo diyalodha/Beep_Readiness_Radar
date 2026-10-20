@@ -18,7 +18,7 @@ export default function App() {
     return localStorage.getItem('beep_theme') || 'dark';
   });
 
-  // User state: logged in user profile
+  // User state: logged in user profile & JWT token
   const [user, setUser] = useState(() => {
     try {
       const savedUser = localStorage.getItem('beep_user');
@@ -27,6 +27,37 @@ export default function App() {
       return null;
     }
   });
+
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem('beep_token') || '';
+  });
+
+  // Verify session validity with backend on boot
+  useEffect(() => {
+    const savedToken = localStorage.getItem('beep_token');
+    if (savedToken) {
+      fetch('/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${savedToken}` }
+      })
+        .then(res => {
+          if (res.ok) return res.json();
+          throw new Error('Session invalid');
+        })
+        .then(data => {
+          if (data?.user) {
+            setUser(data.user);
+            localStorage.setItem('beep_user', JSON.stringify(data.user));
+          }
+        })
+        .catch(() => {
+          // Invalidate session
+          setUser(null);
+          setToken('');
+          localStorage.removeItem('beep_token');
+          localStorage.removeItem('beep_user');
+        });
+    }
+  }, []);
 
   // Applications Tracker state
   const [isApplicationsOpen, setIsApplicationsOpen] = useState(false);
@@ -81,15 +112,20 @@ export default function App() {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  const handleLogin = (userData) => {
+  const handleLogin = (userData, userToken) => {
     setUser(userData);
+    const tokenVal = userToken || '';
+    setToken(tokenVal);
     localStorage.setItem('beep_user', JSON.stringify(userData));
+    if (tokenVal) {
+      localStorage.setItem('beep_token', tokenVal);
+    }
 
     // Also persist in local registered students list
     try {
       const all = JSON.parse(localStorage.getItem('beep_registered_students') || '[]');
       const filtered = all.filter(u => u.email?.toLowerCase() !== userData.email?.toLowerCase());
-      localStorage.setItem('beep_registered_students', JSON.stringify([userData, ...filtered]));
+      localStorage.setItem('beep_registered_students', JSON.stringify([{ ...userData, token: tokenVal }, ...filtered]));
     } catch {
       // ignore
     }
@@ -97,33 +133,36 @@ export default function App() {
 
   const handleLogout = () => {
     setUser(null);
+    setToken('');
     localStorage.removeItem('beep_user');
+    localStorage.removeItem('beep_token');
+    localStorage.removeItem('beep_applications');
+    setApplications([]);
     setResult(null);
   };
 
-  // Sync applications from backend / localStorage for the logged in user
+  // Sync applications from backend (strictly authorized by JWT token)
   useEffect(() => {
-    if (!user?.email) return;
-    fetch(`/api/applications?email=${encodeURIComponent(user.email)}`)
-      .then(res => res.json())
+    if (!token) return;
+    fetch('/api/applications', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        return res.json();
+      })
       .then(data => {
         if (data?.applications && Array.isArray(data.applications)) {
-          setApplications(prev => {
-            const map = new Map();
-            // Merge existing local and server apps by refId
-            for (const app of [...data.applications, ...prev]) {
-              if (app.refId) map.set(app.refId, app);
-            }
-            const merged = Array.from(map.values()).sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
-            localStorage.setItem('beep_applications', JSON.stringify(merged));
-            return merged;
-          });
+          setApplications(data.applications);
+          localStorage.setItem('beep_applications', JSON.stringify(data.applications));
         }
       })
       .catch(err => {
-        console.warn('Could not fetch server applications, relying on local storage:', err);
+        console.warn('Could not fetch server applications, relying on local storage cache:', err);
       });
-  }, [user]);
+  }, [token]);
 
   const handleApplicationSubmitted = (newApp) => {
     setApplications(prev => {
@@ -372,6 +411,7 @@ export default function App() {
         internship={selectedInternship || { title: customRoleTitle, company: 'Custom Partner' }}
         result={result}
         user={user}
+        token={token}
         theme={theme}
         onApplicationSubmitted={handleApplicationSubmitted}
       />

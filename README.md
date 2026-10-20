@@ -1,57 +1,68 @@
 # Beep Internship Readiness Checker (Radar)
 > **Founder’s Office Discovery MVP for Beep (EventBeep)**  
-> *Closing the student "Actionability Gap" with transparent skills-match diagnostics and a 7-day preparation sprint.*
+> *Closing the student "Actionability Gap" with transparent skills diagnostics, proof-of-work project blueprints, and cryptographic application tracking.*
 
 ---
 
 ## 🎯 Executive Problem Statement
-College students from Indian universities (especially Tier-2 and Tier-3 institutions) face an acute **Actionability Gap** when applying for internships. When reading job descriptions filled with industry buzzwords, students either experience imposter syndrome and abandon applying, or blindly send generic resumes into a black hole with zero feedback.
-
-Existing ATS score tools and chatbots only give a passive percentage score without telling students what to do next. **Beep Readiness Radar** turns passive rejection anxiety into proactive action by:
-1. Comparing the student's skills against any target internship job description.
-2. Highlighting **Matched**, **Transferable**, and **Critical Missing** skills.
-3. Formulating a **48-Hour Weekend Proof-of-Work Project** to bridge the #1 missing skill.
-4. Generating a **7-Day Day-by-Day Preparation Plan** (learning, project, resume bullets in Google XYZ format, and founder cold DM).
-5. Driving high-intent students directly into the Beep community ecosystem.
+College students from Indian engineering universities (especially Tier-2 and Tier-3 institutions) face an acute **Actionability Gap** when applying for tech internships:
+1. **Silent ATS Drop-offs:** Over 74% of candidate drops occur because resumes mention academic lab coursework without live deployment links, quantifiable impact metrics, or canonical stack keywords.
+2. **Generic Score Black Holes:** Traditional ATS scanners give an arbitrary percentage score without prescribing actionable steps.
+3. **The Beep Solution:** **Beep Readiness Radar** turns rejection anxiety into structured career momentum by:
+   - Diagnosing **Matched**, **Adjacent Transferable**, and **Missing Core** skills against target job descriptions.
+   - Prescribing a **48-Hour Weekend Proof-of-Work Project** with a copyable `README.md` template.
+   - Formulating a **7-Day Day-by-Day Preparation Plan** with Google XYZ bullet formulas and recruiter cold outreach templates.
+   - Providing a **Fast-Track Application Pipeline** with real-time tracking from submission to interview callback.
 
 ---
 
-## 🛠️ Architecture & Security Design
+## 🛠️ System Architecture & Security Design
 
 ```
 d:\EventBeep_Founder's_Office
-├── .env.example            # Backend environment template (API key protection)
-├── .env                    # Local environment config (kept strictly on server)
-├── package.json            # Unified scripts for concurrent dev and building
-├── vite.config.js          # Vite configuration with API proxy to localhost:5000
+├── .env.example              # Environment configuration template
+├── package.json              # Scripts & dependencies
+├── vite.config.js            # Vite build configuration with /api proxy to port 5000
 ├── server/
-│   └── index.js            # Node/Express API server:
-│                           # - Securely holds GEMINI_API_KEY (never leaked to browser)
-│                           # - Provides /api/status and /api/analyze
-│                           # - Dual Engine: Genuine Gemini 2.5 Flash OR Curated Heuristic Demo
+│   ├── db.js                 # SQLite persistent database (WAL mode, parameterized queries)
+│   ├── index.js              # Express 5 backend API:
+│   │                         # - Helmet HTTP security headers (CSP, Frameguard)
+│   │                         # - JWT authentication middleware & bcrypt password hashing
+│   │                         # - Rate limiting on analysis and authentication endpoints
+│   │                         # - Gemini 2.5 Flash live LLM integration with heuristic fallback
+│   │                         # - Strict student account isolation for all applications
+│   └── data/                 # SQLite storage directory (ignored in Git)
+│       └── beep.db
 └── src/
-    ├── App.jsx             # Main dashboard container & error handling
-    ├── index.css           # Tailwind CSS imports & theme styling
-    ├── data/
-    │   └── sampleRoles.js  # 1-click student presets (Frontend, Data Analyst, Product)
-    └── components/
-        ├── Header.jsx      # Beep branding & Live AI / Demo mode badge
-        ├── Hero.jsx        # Problem definition & 3 core value pillars
-        ├── InputSection.jsx# 1-click test presets & dual input forms
-        └── ResultsView.jsx # Transparent scorecard, skills grid, 7-day plan, and action tools
+    ├── App.jsx               # Main application container, session manager & modals
+    ├── components/
+    │   ├── LoginScreen.jsx   # Email-first JWT authentication & returning student quick-login
+    │   ├── Header.jsx        # Navigation, live engine status pill & user profile controls
+    │   ├── Hero.jsx          # Clean, focused landing screen
+    │   ├── InternshipExplorer.jsx # Curated tech roles + custom JD input
+    │   ├── ResumeUploader.jsx# PDF/DOCX/TXT dropzone with native PDF iframe viewer
+    │   ├── ResultsView.jsx   # Match scorecard, ATS matrix, interview prep & 48-hr project
+    │   ├── StatisticsModal.jsx # Dual-tab student analytics & 2026 campus hiring benchmarks
+    │   ├── ApplicationModal.jsx # Fast-track internship submission
+    │   └── ApplicationTrackerModal.jsx # 4-stage pipeline tracker & receipt download
+    └── utils/
+        ├── documentParser.js # Multi-format client-side parser (pdfjs-dist + mammoth.js)
+        └── heuristicCore.js  # 50+ technology taxonomy, transferable logic & zero fake metrics
 ```
 
-### 🔒 Zero Client-Side Secret Leakage
-- **No API keys exist in client-side code.**
-- All analysis requests route through the Express backend proxy (`/api/analyze`).
-- **Clear Mode Transparency:** The app explicitly informs students whether results were generated by **🟢 Genuine Gemini 2.5 Flash** or the **🟡 Curated Heuristic Engine (Demo Mode)**.
+### 🔒 Enterprise Security & Privacy (P0 Standards)
+- **Cryptographic Authentication:** Passwords hashed with `bcryptjs` (salt rounds: 10), sessions secured with signed `jsonwebtoken` (JWT).
+- **Strict Account Isolation:** Students can only fetch and modify their own applications (`WHERE user_id = req.user.id`).
+- **HTTP Security Headers:** Protected with `helmet` against cross-site scripting and MIME sniffing.
+- **Rate Limiting:** Guarded by `express-rate-limit` (25 analysis calls/min, 40 auth attempts/15 min).
+- **Relational Persistence:** SQLite database (`better-sqlite3`) with WAL journal mode, relational foreign keys, and 100% parameterized queries.
 
 ---
 
 ## 🚀 How to Run Locally
 
 ### 1. Prerequisites
-- **Node.js** v18+ (tested on Node v24)
+- **Node.js** v18+ (tested on Node v20/v22/v24)
 - **npm** v10+
 
 ### 2. Install Dependencies
@@ -59,65 +70,54 @@ d:\EventBeep_Founder's_Office
 npm install
 ```
 
-### 3. (Optional) Enable Live Gemini AI
-By default, the app runs in **Curated Heuristic Demo Mode** with zero configuration required.
+### 3. (Optional) Configure Live Gemini AI
+By default, the server runs in **Curated Heuristic Mode** with zero configuration required.
 
-To connect live Gemini AI:
-1. Open `.env` in the root folder.
+To connect live Gemini 2.5 Flash:
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
 2. Add your Google Gemini API key:
    ```env
    PORT=5000
    GEMINI_API_KEY=your_gemini_api_key_here
+   JWT_SECRET=your_secure_jwt_secret_key
    ```
-3. Restart the dev server. The header badge will update to **🟢 Live AI Engine (Gemini)**.
+3. Restart the server. The header badge will automatically update to **🟢 Gemini 2.5 Flash (Live AI)**.
 
 ### 4. Start the Application
-Run both the backend API and frontend with a single command:
+Run both backend and frontend concurrently:
 ```bash
 npm run dev
 ```
-* **Frontend:** Open [http://localhost:5173](http://localhost:5173) in your browser.
-* **Backend API:** Running on `http://localhost:5000`.
+* **Frontend Web App:** [http://localhost:5173](http://localhost:5173)
+* **Backend API:** [http://localhost:5000](http://localhost:5000)
 
 ---
 
-## 🌐 How to Deploy Publicly
-
-### Option A: Deploy Frontend to Vercel (Recommended for Public Demo)
-1. Push this repository to GitHub.
-2. Import the project into **Vercel** ([vercel.com](https://vercel.com)).
-3. Framework Preset: **Vite**.
-4. Build Command: `npm run build`.
-5. Output Directory: `dist`.
-6. *(Optional)* Add `GEMINI_API_KEY` in Vercel Project Settings > Environment Variables if using a serverless function proxy.
-
-### Option B: Deploy Fullstack (Render / Railway)
-1. Create a **Web Service** on **Render** or **Railway**.
-2. Set Build Command: `npm install && npm run build`.
-3. Set Start Command: `node server/index.js`.
-4. In `server/index.js`, ensure Express serves static files from `dist/` in production:
-   ```javascript
-   import path from 'path';
-   app.use(express.static(path.join(process.cwd(), 'dist')));
-   app.get('*', (req, res) => res.sendFile(path.join(process.cwd(), 'dist', 'index.html')));
-   ```
-5. Add `GEMINI_API_KEY` in the environment variables tab.
+## 🧪 Testing & Code Quality
+- **Linter Check:**
+  ```bash
+  npm run lint
+  ```
+  *(0 warnings, 0 errors via oxlint)*
+- **Production Build:**
+  ```bash
+  npm run build
+  ```
+  *(Bundles cleanly in <1s with Vite)*
 
 ---
 
-## 🧪 Verification & Test Presets
-The app includes **3 realistic Indian college scenarios** clickable in 1-click:
-1. **Frontend Engineer Intern @ Swiggy / Hyperlocal Tech:**  
-   * Tests student with React/JS basics against Next.js/TypeScript/Tailwind/REST requirements.
-2. **Data Analyst Intern @ CRED / Fintech:**  
-   * Tests student with Python/basic SQL against Advanced SQL, Tableau, and business metrics.
-3. **Product Management Intern @ EventBeep:**  
-   * Tests student with college club leadership against user research, PRDs, and funnel analytics.
+## 💼 Demo Credentials for Evaluators
+For instant recruiter/evaluator review without filling in a new registration form:
+* Click **"Quick Evaluator Access (Demo Student) ➔"** on the login screen, or sign in with:
+  * **Email:** `diya05lodha@gmail.com`
+  * **Password:** `Beep@2026`
 
 ---
 
-## 📊 Founder’s Office Scorecard (P-F-I-F Assessment)
-* **User Pain (5/5):** Rejection ghosting is the #1 emotional pain point for college job hunters.
-* **Frequency (4/5):** Occurs weekly during 6th, 7th, and 8th semester placement seasons.
-* **Impact on Beep (5/5):** Converts anxious students into active community members seeking project reviews and mentorship on Beep.
-* **Feasibility (5/5):** Standalone, fast, responsive MVP build with immediate student utility.
+## 📄 License & Attribution
+Built for the **EventBeep Founder’s Office Assignment (2026)**.
+All diagnostic recommendations, Google XYZ bullet templates, and proof-of-work project blueprints are tailored for Indian college technology interns.

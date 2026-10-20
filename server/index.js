@@ -1,10 +1,13 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
-import fs from 'fs';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { userQueries, applicationQueries } from './db.js';
 import { runDynamicHeuristicAnalysis } from '../src/utils/heuristicCore.js';
 
 dotenv.config();
@@ -14,37 +17,78 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const JWT_SECRET = process.env.JWT_SECRET || 'beep-founder-office-secure-jwt-key-2026';
+
+// --- Security Headers via Helmet ---
+// Configure Helmet to allow Vite dev mode and safe iframe preview of documents
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  frameguard: false, // allows same-origin PDF previews in modal
+}));
 
 // --- CORS: restrict to known development origins ---
 const ALLOWED_ORIGINS = new Set([
   'http://localhost:5173',
   'http://127.0.0.1:5173',
 ]);
+
 app.use(cors({
   origin(origin, callback) {
-    // Allow same-origin / curl / no-Origin requests (e.g., server-to-server).
     if (!origin || ALLOWED_ORIGINS.has(origin)) return callback(null, true);
     return callback(new Error('Origin not allowed by CORS'));
   },
-  credentials: false,
+  credentials: true,
 }));
 
 app.use(express.json({ limit: '4mb' }));
 
-// --- Rate limiter for the analysis endpoint ---
+// --- Rate Limiting ---
 const analyzeLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 20,
+  max: 25,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many analysis requests. Please wait a minute and try again.' },
 });
 
-// Health and AI status check endpoint
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many authentication attempts. Please try again after 15 minutes.' },
+});
+
+// --- Authentication Middleware ---
+export function authMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required. No session token provided.' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Session expired. Please log in again.' });
+    }
+    return res.status(401).json({ error: 'Invalid authentication session.' });
+  }
+}
+
+// ==========================================
+// 1. HEALTH AND STATUS ENDPOINT
+// ==========================================
 app.get('/api/status', (req, res) => {
   const hasKey = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim());
   res.json({
     status: 'ok',
+    database: 'SQLite (WAL mode)',
+    security: 'JWT + bcrypt + Helmet active',
     aiEnabled: hasKey,
     engine: hasKey ? 'Gemini 2.5 Flash (Live AI)' : 'Curated Heuristic Engine (Demo Mode)',
     message: hasKey
@@ -53,9 +97,259 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// ---------- Heuristic engine (imported from src/utils/heuristicCore.js) ----------
+// ==========================================
+// 2. AUTHENTICATION ENDPOINTS
+// ==========================================
 
-// ---------- Request body validation ----------
+// Check if an email is registered (for step-by-step UI UX)
+app.post('/api/auth/check-email', (req, res) => {
+  const { email } = req.body || {};
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({ error: 'email is required' });
+  }
+  const clean = email.trim().toLowerCase();
+  const user = userQueries.findByEmail(clean);
+  if (user) {
+    return res.json({
+      exists: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        college: user.college,
+        graduationYear: user.graduation_year,
+        avatar: user.avatar
+      }
+    });
+  }
+  return res.json({ exists: false });
+});
+
+// Student Registration
+app.post('/api/auth/register', authLimiter, async (req, res) => {
+  const { name, email, password, college, graduationYear } = req.body || {};
+
+  if (!email || typeof email !== 'string' || !/^\S+@\S+\.\S+$/.test(email.trim())) {
+    return res.status(400).json({ error: 'A valid email address is required.' });
+  }
+  if (!name || typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'Full name is required.' });
+  }
+  if (!password || typeof password !== 'string' || password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const existing = userQueries.findByEmail(cleanEmail);
+  if (existing) {
+    return res.status(409).json({ error: 'An account with this email already exists. Please sign in instead.' });
+  }
+
+  try {
+    const passwordHash = await bcrypt.hash(password, 10);
+    const newUser = userQueries.createUser({
+      email: cleanEmail,
+      passwordHash,
+      name: name.trim(),
+      college: (college || 'College Student (India)').trim(),
+      graduationYear: (graduationYear || '2026').trim(),
+      avatar: null
+    });
+
+    const token = jwt.sign(
+      { id: newUser.id, email: newUser.email, name: newUser.name },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return res.status(201).json({
+      ok: true,
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        name: newUser.name,
+        college: newUser.college,
+        graduationYear: newUser.graduation_year,
+        avatar: newUser.avatar,
+        createdAt: newUser.created_at
+      },
+      token
+    });
+  } catch (err) {
+    console.error('Registration error:', err);
+    return res.status(500).json({ error: 'Registration failed due to a server error.' });
+  }
+});
+
+// Student Login
+app.post('/api/auth/login', authLimiter, async (req, res) => {
+  const { email, password } = req.body || {};
+
+  if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
+    return res.status(400).json({ error: 'Email and password are required.' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const user = userQueries.findByEmail(cleanEmail);
+  if (!user) {
+    // Constant-time style response to prevent email enumeration
+    return res.status(401).json({ error: 'Invalid email or password.' });
+  }
+
+  const passwordMatch = await bcrypt.compare(password, user.password_hash);
+  if (!passwordMatch) {
+    return res.status(401).json({ error: 'Invalid email or password.' });
+  }
+
+  const token = jwt.sign(
+    { id: user.id, email: user.email, name: user.name },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+
+  return res.json({
+    ok: true,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      college: user.college,
+      graduationYear: user.graduation_year,
+      avatar: user.avatar,
+      createdAt: user.created_at
+    },
+    token
+  });
+});
+
+// Verify current session / token
+app.get('/api/auth/me', authMiddleware, (req, res) => {
+  const user = userQueries.findById(req.user.id);
+  if (!user) {
+    return res.status(404).json({ error: 'User profile not found.' });
+  }
+  return res.json({
+    ok: true,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      college: user.college,
+      graduationYear: user.graduation_year,
+      avatar: user.avatar,
+      createdAt: user.created_at
+    }
+  });
+});
+
+// Backward compatibility helper for legacy lookup
+app.get('/api/users/lookup', (req, res) => {
+  const { email } = req.query;
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({ error: 'email is required' });
+  }
+  const user = userQueries.findByEmail(email.trim().toLowerCase());
+  if (user) {
+    return res.json({
+      found: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        college: user.college,
+        graduationYear: user.graduation_year,
+        avatar: user.avatar
+      }
+    });
+  }
+  return res.json({ found: false });
+});
+
+// ==========================================
+// 3. APPLICATION TRACKING ENDPOINTS (PROTECTED)
+// ==========================================
+
+function generateRefId() {
+  const rand = Math.floor(100000 + Math.random() * 900000);
+  const stamp = Date.now().toString(36).slice(-4).toUpperCase();
+  return `BEEP-${stamp}-${rand}`;
+}
+
+// Submit a new application (Strictly bound to authenticated student)
+app.post('/api/applications', authMiddleware, (req, res) => {
+  const { name, phone, githubUrl, role, company, matchScore } = req.body || {};
+  const errors = [];
+
+  if (typeof name !== 'string' || !name.trim()) errors.push('Applicant name is required');
+  if (typeof phone !== 'string' || phone.trim().length < 6) errors.push('Valid phone number is required');
+  if (typeof role !== 'string' || !role.trim()) errors.push('Role is required');
+  if (githubUrl !== undefined && githubUrl !== '' && typeof githubUrl !== 'string') {
+    errors.push('githubUrl must be a string');
+  }
+  if (matchScore !== undefined && matchScore !== null && (typeof matchScore !== 'number' || matchScore < 0 || matchScore > 100)) {
+    errors.push('matchScore must be a number between 0 and 100');
+  }
+
+  if (errors.length > 0) {
+    return res.status(400).json({ error: 'Invalid application payload', details: errors });
+  }
+
+  const refId = generateRefId();
+
+  try {
+    const record = applicationQueries.createApplication({
+      refId,
+      userId: req.user.id,
+      userEmail: req.user.email,
+      name: name.trim(),
+      phone: phone.trim(),
+      githubUrl: (githubUrl || '').trim(),
+      role: role.trim(),
+      company: (company || 'Hiring Partner').trim(),
+      matchScore: typeof matchScore === 'number' ? matchScore : null
+    });
+
+    return res.status(201).json({
+      ok: true,
+      refId: record.ref_id,
+      submittedAt: record.submitted_at,
+      status: record.status
+    });
+  } catch (err) {
+    console.error('Failed to persist application:', err);
+    return res.status(500).json({ error: 'Could not save application to the database.' });
+  }
+});
+
+// Get applications (STRICT ISOLATION: returns ONLY the authenticated user's records)
+app.get('/api/applications', authMiddleware, (req, res) => {
+  try {
+    const apps = applicationQueries.listByUserId(req.user.id);
+    // Format response objects cleanly
+    const formatted = apps.map(a => ({
+      refId: a.ref_id,
+      name: a.name,
+      email: a.user_email,
+      phone: a.phone,
+      githubUrl: a.github_url,
+      role: a.role,
+      company: a.company,
+      matchScore: a.match_score,
+      status: a.status,
+      submittedAt: a.submitted_at
+    }));
+
+    return res.json({ applications: formatted });
+  } catch (err) {
+    console.error('Failed to read applications:', err);
+    return res.status(500).json({ error: 'Could not retrieve applications.' });
+  }
+});
+
+// ==========================================
+// 4. AI & HEURISTIC ANALYSIS ENDPOINT
+// ==========================================
+
 const MAX_FIELD_CHARS = 50000;
 function validateAnalyzeBody(body) {
   const errors = [];
@@ -79,7 +373,6 @@ function validateAnalyzeBody(body) {
   return errors;
 }
 
-// ---------- AI output schema validation ----------
 function validateAIResult(data) {
   if (!data || typeof data !== 'object') return 'Response is not an object.';
   if (typeof data.matchScore !== 'number' || Number.isNaN(data.matchScore) || data.matchScore < 0 || data.matchScore > 100) {
@@ -98,10 +391,9 @@ function validateAIResult(data) {
   if (typeof data.targetRole !== 'string' || typeof data.company !== 'string') {
     return 'targetRole and company must be strings.';
   }
-  return null; // valid
+  return null;
 }
 
-// ---------- Analysis endpoint ----------
 app.post('/api/analyze', analyzeLimiter, async (req, res) => {
   const validationErrors = validateAnalyzeBody(req.body);
   if (validationErrors.length > 0) {
@@ -111,13 +403,13 @@ app.post('/api/analyze', analyzeLimiter, async (req, res) => {
   const { studentSkills, jobDescription, targetRole, companyName } = req.body;
   const apiKey = process.env.GEMINI_API_KEY?.trim();
 
-  // Heuristic mode: no Gemini key configured.
+  // Heuristic mode: no Gemini key configured
   if (!apiKey) {
     const heuristicResult = runDynamicHeuristicAnalysis(studentSkills, jobDescription, targetRole, companyName);
     return res.json(heuristicResult);
   }
 
-  // Live Gemini analysis with a hard 15s timeout.
+  // Live Gemini analysis with a hard 15s timeout
   const controller = new AbortController();
   const timeoutHandle = setTimeout(() => controller.abort(), 15_000);
 
@@ -226,7 +518,6 @@ Respond strictly with valid JSON without any markdown formatting or backticks:
     const cleanedText = candidateText.replace(/```json/g, '').replace(/```/g, '').trim();
     const parsedData = JSON.parse(cleanedText);
 
-    // Validate the AI-produced structure before handing it to the client.
     const validationError = validateAIResult(parsedData);
     if (validationError) {
       const fallbackResult = runDynamicHeuristicAnalysis(studentSkills, jobDescription, targetRole, companyName);
@@ -250,147 +541,11 @@ Respond strictly with valid JSON without any markdown formatting or backticks:
   }
 });
 
-// ---------- Application persistence ----------
-const DATA_DIR = path.join(__dirname, 'data');
-const APPLICATIONS_FILE = path.join(DATA_DIR, 'applications.json');
-
-function ensureApplicationsFile() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(APPLICATIONS_FILE)) fs.writeFileSync(APPLICATIONS_FILE, '[]', 'utf8');
-}
-
-function readApplications() {
-  ensureApplicationsFile();
-  try {
-    return JSON.parse(fs.readFileSync(APPLICATIONS_FILE, 'utf8'));
-  } catch {
-    return [];
-  }
-}
-
-function appendApplication(app) {
-  const all = readApplications();
-  all.push(app);
-  fs.writeFileSync(APPLICATIONS_FILE, JSON.stringify(all, null, 2), 'utf8');
-}
-
-function generateRefId() {
-  const rand = Math.floor(100000 + Math.random() * 900000);
-  const stamp = Date.now().toString(36).slice(-4).toUpperCase();
-  return `BEEP-${stamp}-${rand}`;
-}
-
-app.post('/api/applications', (req, res) => {
-  const { name, email, phone, githubUrl, role, company, matchScore } = req.body || {};
-  const errors = [];
-  if (typeof name !== 'string' || !name.trim()) errors.push('name is required');
-  if (typeof email !== 'string' || !/^\S+@\S+\.\S+$/.test(email)) errors.push('a valid email is required');
-  if (typeof phone !== 'string' || phone.trim().length < 6) errors.push('phone is required');
-  if (typeof role !== 'string' || !role.trim()) errors.push('role is required');
-  if (githubUrl !== undefined && githubUrl !== '' && typeof githubUrl !== 'string') errors.push('githubUrl must be a string');
-  if (matchScore !== undefined && (typeof matchScore !== 'number' || matchScore < 0 || matchScore > 100)) {
-    errors.push('matchScore must be a number between 0 and 100');
-  }
-  if (errors.length > 0) return res.status(400).json({ error: 'Invalid application payload', details: errors });
-
-  const record = {
-    refId: generateRefId(),
-    name: name.trim(),
-    email: email.trim().toLowerCase(),
-    phone: phone.trim(),
-    githubUrl: (githubUrl || '').trim(),
-    role: role.trim(),
-    company: (company || '').trim(),
-    matchScore: typeof matchScore === 'number' ? matchScore : null,
-    submittedAt: new Date().toISOString()
-  };
-
-  try {
-    appendApplication(record);
-  } catch (err) {
-    console.error('Failed to persist application:', err);
-    return res.status(500).json({ error: 'Could not save application on the server.' });
-  }
-
-  return res.json({ ok: true, refId: record.refId, submittedAt: record.submittedAt });
-});
-
-app.get('/api/applications', (req, res) => {
-  const { email } = req.query;
-  const all = readApplications();
-  if (email && typeof email === 'string') {
-    const clean = email.trim().toLowerCase();
-    const filtered = all.filter(a => a.email && a.email.toLowerCase() === clean);
-    return res.json({ applications: filtered });
-  }
-  return res.json({ applications: all });
-});
-
-// ---------- User Profile persistence ----------
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
-
-function ensureUsersFile() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, '[]', 'utf8');
-}
-
-function readUsers() {
-  ensureUsersFile();
-  try {
-    return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-  } catch {
-    return [];
-  }
-}
-
-function saveUserRecord(userData) {
-  const all = readUsers();
-  const existingIdx = all.findIndex(u => u.email.toLowerCase() === userData.email.toLowerCase());
-  if (existingIdx >= 0) {
-    all[existingIdx] = { ...all[existingIdx], ...userData, updatedAt: new Date().toISOString() };
-  } else {
-    all.push({ ...userData, createdAt: new Date().toISOString() });
-  }
-  fs.writeFileSync(USERS_FILE, JSON.stringify(all, null, 2), 'utf8');
-  return all.find(u => u.email.toLowerCase() === userData.email.toLowerCase());
-}
-
-app.get('/api/users/lookup', (req, res) => {
-  const { email } = req.query;
-  if (!email || typeof email !== 'string') {
-    return res.status(400).json({ error: 'email is required' });
-  }
-  const all = readUsers();
-  const found = all.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
-  if (found) {
-    return res.json({ found: true, user: found });
-  }
-  return res.json({ found: false });
-});
-
-app.post('/api/users', (req, res) => {
-  const { name, email, college, graduationYear, avatar } = req.body || {};
-  if (!email || typeof email !== 'string' || !/^\S+@\S+\.\S+$/.test(email)) {
-    return res.status(400).json({ error: 'Valid email is required' });
-  }
-  if (!name || typeof name !== 'string' || !name.trim()) {
-    return res.status(400).json({ error: 'Full name is required' });
-  }
-  const cleanUser = {
-    name: name.trim(),
-    email: email.trim().toLowerCase(),
-    college: (college || 'College Student').trim(),
-    graduationYear: (graduationYear || '').trim(),
-    avatar: avatar || null
-  };
-  const saved = saveUserRecord(cleanUser);
-  return res.json({ ok: true, user: saved });
-});
-
-// ---------- Client-safe analysis fallback (exported for reuse) ----------
 export { runDynamicHeuristicAnalysis };
 
 app.listen(PORT, () => {
   console.log(`[Beep Server] Backend API running at http://localhost:${PORT}`);
+  console.log(`[Beep Server] Database: SQLite persistent storage active at server/data/beep.db`);
+  console.log(`[Beep Server] Security: JWT authentication + Helmet headers active`);
   console.log(`[Beep Server] Mode: ${process.env.GEMINI_API_KEY ? 'Live Gemini AI' : 'Demo / Dynamic Heuristic Mode'}`);
 });

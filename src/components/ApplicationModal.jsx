@@ -7,6 +7,7 @@ export default function ApplicationModal({
   internship,
   result,
   user,
+  token,
   theme,
   onApplicationSubmitted
 }) {
@@ -29,7 +30,6 @@ export default function ApplicationModal({
 
     const payload = {
       name: user?.name || 'Applicant',
-      email: user?.email || '',
       phone: phoneNumber,
       githubUrl,
       role: internship?.title || 'Internship Role',
@@ -40,7 +40,10 @@ export default function ApplicationModal({
     try {
       const resp = await fetch('/api/applications', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify(payload),
       });
       if (!resp.ok) {
