@@ -19,11 +19,11 @@ export default function StatisticsModal({
   const isDark = theme === 'dark';
 
   const placementBenchmarks = [
-    { role: 'Frontend Engineer Intern', targetMatch: '75-80%', avgSalary: '₹25k-45k/mo', keyFilter: 'React, TypeScript, Next.js, Live Link' },
-    { role: 'Fullstack Developer Intern', targetMatch: '75-85%', avgSalary: '₹30k-50k/mo', keyFilter: 'Fullstack MERN/PERN, Docker, REST' },
-    { role: 'AI / GenAI Engineering Intern', targetMatch: '80-85%', avgSalary: '₹40k-65k/mo', keyFilter: 'Python, RAG, LangChain, Vector DBs' },
-    { role: 'Backend Engineering Intern', targetMatch: '80-85%', avgSalary: '₹30k-55k/mo', keyFilter: 'SQL, Redis, Microservices, System Design' },
-    { role: 'Product & Growth Analyst', targetMatch: '70-80%', avgSalary: '₹25k-40k/mo', keyFilter: 'SQL, Power BI, Funnel Metrics, PRDs' },
+    { role: 'Frontend Engineer Intern', targetMatch: '~75-80% (Est.)', avgSalary: '₹25k-45k/mo (Est.)', keyFilter: 'React, TypeScript, Next.js, Live Link' },
+    { role: 'Fullstack Developer Intern', targetMatch: '~75-85% (Est.)', avgSalary: '₹30k-50k/mo (Est.)', keyFilter: 'Fullstack MERN/PERN, Docker, REST' },
+    { role: 'AI / GenAI Engineering Intern', targetMatch: '~80-85% (Est.)', avgSalary: '₹40k-65k/mo (Est.)', keyFilter: 'Python, RAG, LangChain, Vector DBs' },
+    { role: 'Backend Engineering Intern', targetMatch: '~80-85% (Est.)', avgSalary: '₹30k-55k/mo (Est.)', keyFilter: 'SQL, Redis, Microservices, System Design' },
+    { role: 'Product & Growth Analyst', targetMatch: '~70-80% (Est.)', avgSalary: '₹25k-40k/mo (Est.)', keyFilter: 'SQL, Power BI, Funnel Metrics, PRDs' },
   ];
 
   const disqualifiers = [
@@ -361,8 +361,8 @@ export default function StatisticsModal({
                 <div className={`p-3.5 rounded-2xl border text-center ${
                   isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
                 }`}>
-                  <span className="text-2xl sm:text-3xl font-black text-purple-600 dark:text-purple-400 block">75-80%+</span>
-                  <span className="text-xs font-bold block mt-1">Target Match</span>
+                  <span className="text-2xl sm:text-3xl font-black text-purple-600 dark:text-purple-400 block">~75-80%</span>
+                  <span className="text-xs font-bold block mt-1">Est. Target Match</span>
                   <p className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                     Keyword alignment guideline
                   </p>
@@ -432,8 +432,8 @@ export default function StatisticsModal({
                     }`}>
                       <tr>
                         <th className="p-3">Target Role</th>
-                        <th className="p-3">Target Alignment</th>
-                        <th className="p-3">Market Stipend Range</th>
+                        <th className="p-3">Est. Target Match</th>
+                        <th className="p-3">Est. Monthly Stipend*</th>
                         <th className="p-3 hidden sm:table-cell">Key Recruiter Filter</th>
                       </tr>
                     </thead>
@@ -456,6 +456,9 @@ export default function StatisticsModal({
                     </tbody>
                   </table>
                 </div>
+                <p className={`text-[10px] mt-2 italic ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  *All stipend figures and match percentages are illustrative market estimates compiled for candidate preparation, not verified platform commitments or guaranteed offers.
+                </p>
               </div>
 
               {/* The Beep Solution */}

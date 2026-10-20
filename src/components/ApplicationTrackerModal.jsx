@@ -286,7 +286,7 @@ will be reflected directly in your Beep application tracker.
         }`}>
           <div className="flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-purple-500" />
-            <span>Applications are verified and synced with Beep's hiring partner queue.</span>
+            <span>Applications are saved in Beep. Status updates are shown when recorded on the platform.</span>
           </div>
           <button
             onClick={onClose}

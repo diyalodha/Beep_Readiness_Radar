@@ -77,12 +77,25 @@ const serverDataDir = path.join(STAGING, 'server', 'data');
 fs.mkdirSync(serverDataDir, { recursive: true });
 fs.writeFileSync(path.join(serverDataDir, '.gitkeep'), '', 'utf8');
 
-// Compress staging directory into ZIP using powershell on Windows or zip on Unix
+// Compress staging directory into ZIP using standard forward-slash ('/') paths
 try {
   if (process.platform === 'win32') {
-    const escapedStaging = (STAGING + '\\*').replace(/'/g, "''");
-    const escapedOutput = OUTPUT_ZIP.replace(/'/g, "''");
-    execSync(`powershell -Command "Compress-Archive -Path '${escapedStaging}' -DestinationPath '${escapedOutput}' -Force"`, { stdio: 'inherit' });
+    const stagingEscaped = STAGING.replace(/'/g, "''");
+    const outputEscaped = OUTPUT_ZIP.replace(/'/g, "''");
+    const psScript = `
+      Add-Type -AssemblyName System.IO.Compression;
+      Add-Type -AssemblyName System.IO.Compression.FileSystem;
+      $staging = '${stagingEscaped}';
+      $output = '${outputEscaped}';
+      if (Test-Path $output) { Remove-Item $output -Force };
+      $zip = [System.IO.Compression.ZipFile]::Open($output, [System.IO.Compression.ZipArchiveMode]::Create);
+      Get-ChildItem -Path $staging -Recurse | Where-Object { -not $_.PSIsContainer } | ForEach-Object {
+        $rel = $_.FullName.Substring($staging.Length).TrimStart('\\').Replace('\\', '/');
+        [void][System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $_.FullName, $rel, [System.IO.Compression.CompressionLevel]::Optimal);
+      };
+      $zip.Dispose();
+    `;
+    execSync(`powershell -NoProfile -Command "${psScript.replace(/\r?\n/g, ' ')}"`, { stdio: 'inherit' });
   } else {
     execSync(`cd "${STAGING}" && zip -r "${OUTPUT_ZIP}" .`, { stdio: 'inherit' });
   }
