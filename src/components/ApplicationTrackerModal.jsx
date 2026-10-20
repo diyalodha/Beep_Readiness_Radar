@@ -110,7 +110,7 @@ will be reflected directly in your Beep application tracker.
                 </span>
               </div>
               <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Track your active internship submissions and live candidate review pipeline.
+                Application submission and status tracker for your Beep records.
               </p>
             </div>
           </div>
@@ -226,11 +226,11 @@ will be reflected directly in your Beep application tracker.
                     <div className="mt-5 pt-4 border-t border-dashed border-slate-200 dark:border-slate-800">
                       <div className="flex items-center justify-between mb-2">
                         <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                          Application Review Pipeline
+                          Application Submission & Status Tracker
                         </span>
                         <span className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
-                          In Active Review
+                          <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                          Record Confirmed
                         </span>
                       </div>
 

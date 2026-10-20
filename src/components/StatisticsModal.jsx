@@ -227,10 +227,10 @@ export default function StatisticsModal({
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
                       <FileText className="w-3.5 h-3.5 text-purple-500" />
-                      Your Resume Screening Health
+                      Resume Readiness & Keyword Health
                     </span>
                     <span className="text-[10px] font-mono text-emerald-500 font-bold">
-                      {result.detailedStats?.atsScreenPassRate || 80}% Screening Probability
+                      {result.detailedStats?.estimatedReadinessIndicator ?? result.matchScore ?? 0}% Estimated Resume Readiness
                     </span>
                   </div>
 
@@ -241,16 +241,16 @@ export default function StatisticsModal({
                     </div>
                     <div className="p-2.5 rounded-xl border border-dashed border-slate-700/50 flex justify-between items-center">
                       <span className="opacity-80">Quantifiable Metrics Found:</span>
-                      <span className="font-bold text-emerald-500">{result.resumeStats?.metricMatches || (result.resumeStats?.hasMetrics ? 2 : 0)} metrics</span>
+                      <span className="font-bold text-emerald-500">{result.resumeStats?.metricMatches || (result.resumeStats?.hasMetrics ? 1 : 0)} metrics</span>
                     </div>
                     <div className="p-2.5 rounded-xl border border-dashed border-slate-700/50 flex justify-between items-center">
-                      <span className="opacity-80">Power Action Verbs:</span>
-                      <span className="font-bold text-purple-400">{result.resumeStats?.actionVerbCount || 5} power verbs</span>
+                      <span className="opacity-80">Distinct Action Verbs:</span>
+                      <span className="font-bold text-purple-400">{result.resumeStats?.actionVerbCount || 0} unique verbs</span>
                     </div>
                     <div className="p-2.5 rounded-xl border border-dashed border-slate-700/50 flex justify-between items-center">
-                      <span className="opacity-80">Proof Links (GitHub/Live):</span>
+                      <span className="opacity-80">Project Links (GitHub/Live):</span>
                       <span className={`font-bold ${result.resumeStats?.hasLiveLinks ? 'text-emerald-500' : 'text-rose-500'}`}>
-                        {result.resumeStats?.hasLiveLinks ? 'Verified' : 'Missing'}
+                        {result.resumeStats?.hasLiveLinks ? 'Detected' : 'Not Detected'}
                       </span>
                     </div>
                   </div>
