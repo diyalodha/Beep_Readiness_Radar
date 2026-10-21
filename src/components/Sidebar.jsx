@@ -139,10 +139,10 @@ export default function Sidebar({
                     isActive
                       ? (isDark 
                           ? 'bg-slate-900 text-white shadow-sm ring-1 ring-slate-800 font-bold' 
-                          : 'bg-slate-100 text-slate-900 shadow-sm font-bold')
+                          : 'bg-slate-100 text-slate-950 shadow-sm font-bold border border-slate-200/80')
                       : (isDark
                           ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50')
+                          : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100/80 font-semibold')
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -183,7 +183,7 @@ export default function Sidebar({
                 <p className="text-xs font-bold truncate leading-tight">
                   {user?.name || 'Student'}
                 </p>
-                <p className={`text-[10px] truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                <p className={`text-[10px] truncate font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                   {user?.college || 'Pro plan'}
                 </p>
               </div>

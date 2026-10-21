@@ -137,7 +137,7 @@ export default function DashboardOverview({
             <span className="text-3xl sm:text-4xl font-black block tracking-tight">
               {result ? `${result.matchScore}%` : '--'}
             </span>
-            <span className={`text-xs font-semibold block mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <span className={`text-xs font-bold block mt-1.5 ${isDark ? 'text-slate-400' : 'text-slate-800'}`}>
               ATS Score
             </span>
           </div>
@@ -172,7 +172,7 @@ export default function DashboardOverview({
             <span className="text-3xl sm:text-4xl font-black block tracking-tight">
               {result ? `${result.skillsBreakdown?.matched?.length || 0} matched` : '--'}
             </span>
-            <span className={`text-xs font-semibold block mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <span className={`text-xs font-bold block mt-1.5 ${isDark ? 'text-slate-400' : 'text-slate-800'}`}>
               JD Match
             </span>
           </div>
@@ -207,7 +207,7 @@ export default function DashboardOverview({
             <span className="text-3xl sm:text-4xl font-black block tracking-tight">
               {completedTasks.completeQuiz ? '85%' : '--'}
             </span>
-            <span className={`text-xs font-semibold block mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <span className={`text-xs font-bold block mt-1.5 ${isDark ? 'text-slate-400' : 'text-slate-800'}`}>
               Quiz Score
             </span>
           </div>
@@ -242,7 +242,7 @@ export default function DashboardOverview({
             <span className="text-3xl sm:text-4xl font-black block tracking-tight">
               {applications.length}
             </span>
-            <span className={`text-xs font-semibold block mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <span className={`text-xs font-bold block mt-1.5 ${isDark ? 'text-slate-400' : 'text-slate-800'}`}>
               Jobs Saved
             </span>
           </div>
@@ -274,11 +274,11 @@ export default function DashboardOverview({
               
               {/* Row 1: Resume Strength */}
               <div className="py-3.5 flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                <span className="font-bold text-slate-800 dark:text-slate-200">
                   Resume strength
                 </span>
                 <span className={`font-mono text-[11px] ${
-                  result ? 'text-emerald-500 font-bold' : (isDark ? 'text-slate-500' : 'text-slate-400')
+                  result ? 'text-emerald-600 dark:text-emerald-400 font-bold' : (isDark ? 'text-slate-500' : 'text-slate-600 font-semibold')
                 }`}>
                   {result 
                     ? `${result.detailedStats?.estimatedReadinessIndicator ?? result.matchScore}% • ${result.skillsBreakdown?.matched?.length || 0} skills found` 
@@ -288,11 +288,11 @@ export default function DashboardOverview({
 
               {/* Row 2: JD Match Rate */}
               <div className="py-3.5 flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                <span className="font-bold text-slate-800 dark:text-slate-200">
                   JD match rate
                 </span>
                 <span className={`font-mono text-[11px] ${
-                  result ? 'text-purple-400 font-bold' : (isDark ? 'text-slate-500' : 'text-slate-400')
+                  result ? 'text-purple-600 dark:text-purple-400 font-bold' : (isDark ? 'text-slate-500' : 'text-slate-600 font-semibold')
                 }`}>
                   {result 
                     ? `${result.matchScore}% • ${result.targetRole}` 
@@ -302,11 +302,11 @@ export default function DashboardOverview({
 
               {/* Row 3: Roadmap Completion */}
               <div className="py-3.5 flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                <span className="font-bold text-slate-800 dark:text-slate-200">
                   Roadmap completion
                 </span>
                 <span className={`font-mono text-[11px] ${
-                  result ? 'text-indigo-400 font-bold' : (isDark ? 'text-slate-500' : 'text-slate-400')
+                  result ? 'text-indigo-600 dark:text-indigo-400 font-bold' : (isDark ? 'text-slate-500' : 'text-slate-600 font-semibold')
                 }`}>
                   {result ? '48h Blueprint Ready' : 'No roadmap yet'}
                 </span>
@@ -314,11 +314,11 @@ export default function DashboardOverview({
 
               {/* Row 4: Interview Score */}
               <div className="py-3.5 flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                <span className="font-bold text-slate-800 dark:text-slate-200">
                   Interview score
                 </span>
                 <span className={`font-mono text-[11px] ${
-                  result ? 'text-emerald-500 font-bold' : (isDark ? 'text-slate-500' : 'text-slate-400')
+                  result ? 'text-emerald-600 dark:text-emerald-400 font-bold' : (isDark ? 'text-slate-500' : 'text-slate-600 font-semibold')
                 }`}>
                   {result ? 'STAR Answers Generated' : 'Not completed'}
                 </span>
@@ -380,8 +380,8 @@ export default function DashboardOverview({
                 onClick={() => toggleTask(task.id, task.nav)}
                 className={`p-2.5 rounded-xl border flex items-center justify-between text-xs transition cursor-pointer ${
                   task.done 
-                    ? (isDark ? 'bg-slate-950/40 border-emerald-900/40 text-slate-200' : 'bg-emerald-50/50 border-emerald-200 text-slate-800')
-                    : (isDark ? 'bg-slate-950/40 border-slate-800/80 text-slate-400 hover:text-slate-200 hover:border-slate-700' : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900')
+                    ? (isDark ? 'bg-slate-950/40 border-emerald-900/40 text-slate-200' : 'bg-emerald-50/70 border-emerald-300 text-slate-900 font-semibold')
+                    : (isDark ? 'bg-slate-950/40 border-slate-800/80 text-slate-400 hover:text-slate-200 hover:border-slate-700' : 'bg-slate-50 border-slate-300 text-slate-800 font-semibold hover:text-slate-950')
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
