@@ -43,7 +43,7 @@ export default function InternshipExplorer({
               Select Target Internship
             </h2>
           </div>
-          <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+          <p className={`text-xs mt-1 font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
             Illustrative sample job scenarios modeled after real campus postings, or paste your own custom job description.
           </p>
         </div>
@@ -132,7 +132,7 @@ export default function InternshipExplorer({
                       <h3 className={`text-xs font-bold leading-tight ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
                         {job.title}
                       </h3>
-                      <p className={`text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      <p className={`text-[11px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                         {job.company}
                       </p>
                     </div>
@@ -153,9 +153,9 @@ export default function InternshipExplorer({
 
                 {/* Stipend & Location */}
                 <div className={`flex flex-wrap items-center gap-3 text-[11px] mb-3 pb-2.5 border-b ${
-                  isDark ? 'border-slate-800 text-slate-400' : 'border-slate-100 text-slate-600'
+                  isDark ? 'border-slate-800 text-slate-300' : 'border-slate-200 text-slate-700 font-medium'
                 }`}>
-                  <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                  <span className="flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
                     <IndianRupee className="w-3 h-3" />
                     {job.stipend}
                   </span>
@@ -180,8 +180,8 @@ export default function InternshipExplorer({
                     </span>
                   ))}
                   {job.requiredSkills.length > 4 && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md ${
-                      isDark ? 'text-slate-500' : 'text-slate-400'
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
+                      isDark ? 'text-slate-400' : 'text-slate-600'
                     }`}>
                       +{job.requiredSkills.length - 4} more
                     </span>

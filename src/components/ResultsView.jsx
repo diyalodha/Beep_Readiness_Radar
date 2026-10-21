@@ -161,10 +161,10 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
         }`}>
           <div>
             <div className="flex items-center justify-between">
-              <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                 Dynamic Readiness Score
               </span>
-              <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-600'}`}>
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-800'}`}>
                 {result.resumeStats?.wordCount || 120} words
               </span>
             </div>
@@ -173,7 +173,7 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
               <span className={`text-6xl font-black tracking-tight ${getScoreColor(result.matchScore).split(' ')[0]}`}>
                 {result.matchScore}%
               </span>
-              <span className={`text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                 match for this role
               </span>
             </div>
@@ -186,22 +186,22 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
           </div>
 
           {/* Scoring Methodology Breakdown */}
-          <div className={`mt-6 pt-4 border-t space-y-2 text-xs ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
-            <div className={`flex justify-between ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+          <div className={`mt-6 pt-4 border-t space-y-2 text-xs ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+            <div className={`flex justify-between font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
               <span>Must-Have Skills Match:</span>
-              <span className={`font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+              <span className={`font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
                 {result.scoreBreakdown?.mustHaveCoverage || '65%'}
               </span>
             </div>
-            <div className={`flex justify-between ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <div className={`flex justify-between font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
               <span>Transferable Skills Bonus:</span>
-              <span className="font-semibold text-purple-600 dark:text-purple-400">
+              <span className="font-bold text-purple-600 dark:text-purple-400">
                 {result.scoreBreakdown?.transferableBonus || '+15%'}
               </span>
             </div>
-            <div className={`flex justify-between ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <div className={`flex justify-between font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
               <span>ATS Filter Risk:</span>
-              <span className="font-semibold text-rose-500">
+              <span className="font-bold text-rose-500">
                 {result.scoreBreakdown?.riskFactor || 'Medium'}
               </span>
             </div>
@@ -278,18 +278,18 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
           <div className={`p-4 rounded-xl border ${
             isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
           }`}>
-            <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
               Resume Readiness Indicator
             </span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-2xl font-black text-purple-600 dark:text-purple-400">
                 {detailedStats.estimatedReadinessIndicator ?? detailedStats.coreSkillMatchPercent ?? result.matchScore}%
               </span>
-              <span className="text-[10px] text-purple-500 font-semibold">
+              <span className="text-[10px] text-purple-600 dark:text-purple-400 font-bold">
                 Heuristic
               </span>
             </div>
-            <p className={`text-[10px] mt-1 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-[10px] mt-1 line-clamp-1 font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
               Estimated keyword coverage
             </p>
           </div>
@@ -297,18 +297,18 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
           <div className={`p-4 rounded-xl border ${
             isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
           }`}>
-            <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
               Core Tech Coverage
             </span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
                 {detailedStats.coreSkillMatchPercent}%
               </span>
-              <span className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <span className={`text-[10px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                 of required stack
               </span>
             </div>
-            <p className={`text-[10px] mt-1 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-[10px] mt-1 line-clamp-1 font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
               Exact & canonical matches
             </p>
           </div>
@@ -316,18 +316,18 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
           <div className={`p-4 rounded-xl border ${
             isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
           }`}>
-            <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
               Quantifiable Metrics
             </span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
                 {detailedStats.metricMatches}
               </span>
-              <span className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <span className={`text-[10px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                 detected
               </span>
             </div>
-            <p className={`text-[10px] mt-1 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-[10px] mt-1 line-clamp-1 font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
               Numeric achievement metrics
             </p>
           </div>
@@ -335,18 +335,18 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
           <div className={`p-4 rounded-xl border ${
             isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
           }`}>
-            <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
               Distinct Action Verbs
             </span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-2xl font-black text-amber-500">
                 {detailedStats.actionVerbCount}
               </span>
-              <span className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <span className={`text-[10px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                 unique verbs
               </span>
             </div>
-            <p className={`text-[10px] mt-1 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-[10px] mt-1 line-clamp-1 font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
               Action-oriented verbs
             </p>
           </div>

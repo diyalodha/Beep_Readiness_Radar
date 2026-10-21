@@ -330,11 +330,11 @@ export default function ResumeUploader({
               {isParsing ? 'Parsing your resume...' : 'Drop your Resume here, or click to browse'}
             </h3>
             
-            <p className={`text-xs mt-1 max-w-md mx-auto ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-xs mt-1.5 max-w-md mx-auto font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
               Supported: PDF (parsed with pdf.js), DOCX (Mammoth), RTF, TXT, MD. Max file size 5 MB. Scanned image PDFs are not supported without OCR.
             </p>
 
-            <div className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-purple-600 text-white shadow-md">
+            <div className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-md transition">
               <FileText className="w-3.5 h-3.5" />
               <span>Select Resume File</span>
             </div>
@@ -345,7 +345,7 @@ export default function ResumeUploader({
             isDark ? 'bg-slate-900/50 border-slate-800/80' : 'bg-slate-50 border-slate-200'
           }`}>
             <span className={`text-[11px] font-bold uppercase tracking-wider block mb-2 ${
-              isDark ? 'text-slate-400' : 'text-slate-600'
+              isDark ? 'text-slate-300' : 'text-slate-700'
             }`}>
               Or test with sample student profiles:
             </span>
@@ -356,10 +356,10 @@ export default function ResumeUploader({
                   key={res.id}
                   type="button"
                   onClick={() => handleSampleSelect(res)}
-                  className={`text-left p-3 rounded-xl border transition-all ${
+                  className={`text-left p-3 rounded-xl border transition-all cursor-pointer ${
                     isDark 
-                      ? 'bg-slate-950 border-slate-800 hover:border-purple-500/50 text-slate-300 hover:bg-slate-900' 
-                      : 'bg-white border-slate-200 hover:border-purple-300 text-slate-700 hover:bg-purple-50/30 shadow-sm'
+                      ? 'bg-slate-950 border-slate-800 hover:border-purple-500/50 text-slate-200 hover:bg-slate-900' 
+                      : 'bg-white border-slate-200 hover:border-purple-300 text-slate-800 hover:bg-purple-50/30 shadow-xs'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
@@ -368,8 +368,8 @@ export default function ResumeUploader({
                     </span>
                     <ArrowRight className="w-3 h-3 text-slate-400" />
                   </div>
-                  <h4 className={`text-xs font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{res.label}</h4>
-                  <p className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{res.summary}</p>
+                  <h4 className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-950'}`}>{res.label}</h4>
+                  <p className={`text-[10px] mt-0.5 font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{res.summary}</p>
                 </button>
               ))}
             </div>
