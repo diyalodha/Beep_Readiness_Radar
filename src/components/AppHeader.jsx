@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Menu, X, Sun, Moon, LogOut, Target, FileText, 
   Zap, HelpCircle, MessageSquare, Briefcase, BarChart3,
-  CheckCircle2
+  CheckCircle2, ChevronDown
 } from 'lucide-react';
 
 export default function AppHeader({
@@ -17,6 +17,17 @@ export default function AppHeader({
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isDark = theme === 'dark';
+
+  // Close menu on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isMenuOpen) {
+        setIsMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isMenuOpen]);
 
   const navItems = [
     {
@@ -36,7 +47,7 @@ export default function AppHeader({
     {
       id: 'roadmap',
       label: '48h Roadmap',
-      shortLabel: 'Roadmap',
+      shortLabel: '48h Project',
       icon: Zap,
       desc: 'Weekend proof project, Google XYZ & README'
     },
@@ -85,33 +96,22 @@ export default function AppHeader({
           ? 'bg-slate-950/90 border-slate-800 text-white' 
           : 'bg-white/95 border-slate-300 text-slate-900 shadow-xs'
       }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-3">
           
-          {/* Left: 3-Lines Hamburger Menu + Brand Logo & Name */}
+          {/* Left: Brand Logo & Name + 3-Lines Features Button */}
           <div className="flex items-center gap-3 shrink-0">
-            {/* 3-Lines Toggle Button */}
-            <button
-              onClick={() => setIsMenuOpen(prev => !prev)}
-              className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                isMenuOpen
-                  ? (isDark ? 'bg-purple-600 text-white border-purple-500' : 'bg-purple-600 text-white border-purple-600')
-                  : (isDark ? 'bg-slate-900 border-slate-700 text-slate-200 hover:bg-slate-800' : 'bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200')
-              }`}
-              title="Toggle all features navigation menu"
-              aria-label="Navigation Menu"
-            >
-              {isMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-            </button>
-
             {/* Brand Logo & Name */}
-            <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => handleSelectTab('matcher')}>
+            <div 
+              className="flex items-center gap-2.5 cursor-pointer select-none" 
+              onClick={() => handleSelectTab('matcher')}
+            >
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white font-black text-base shadow-md shadow-purple-600/30">
                 B
               </div>
               <div className="leading-tight">
                 <div className="flex items-center gap-1.5">
                   <span className={`font-black text-base sm:text-lg tracking-tight ${
-                    isDark ? 'text-white' : 'text-slate-900 font-black'
+                    isDark ? 'text-white' : 'text-slate-950 font-black'
                   }`}>
                     EventBeep
                   </span>
@@ -128,10 +128,30 @@ export default function AppHeader({
                 </p>
               </div>
             </div>
+
+            {/* 3-Lines Features Menu Trigger Button */}
+            <button
+              onClick={() => setIsMenuOpen(prev => !prev)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                isMenuOpen
+                  ? (isDark 
+                      ? 'bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-600/30' 
+                      : 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-600/30')
+                  : (isDark 
+                      ? 'bg-slate-900 border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white' 
+                      : 'bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200 shadow-2xs')
+              }`}
+              title="Open full features navigation menu"
+              aria-label="Features menu"
+            >
+              {isMenuOpen ? <X className="w-4 h-4 text-white" /> : <Menu className="w-4 h-4 text-purple-500 dark:text-purple-400" />}
+              <span className="hidden sm:inline">Features</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 hidden sm:inline ${isMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
           </div>
 
-          {/* Center: Desktop Horizontal Feature Pills */}
-          <nav className="hidden xl:flex items-center gap-1 overflow-x-auto py-1">
+          {/* Center: Desktop Feature Pills */}
+          <nav className="hidden lg:flex items-center gap-1 overflow-x-auto py-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -140,7 +160,7 @@ export default function AppHeader({
                 <button
                   key={item.id}
                   onClick={() => handleSelectTab(item.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                     isActive
                       ? (isDark 
                           ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30 border border-purple-500' 
@@ -151,10 +171,10 @@ export default function AppHeader({
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  <span>{item.label}</span>
+                  <span>{item.shortLabel}</span>
                   {item.badge && (
                     <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                      isActive ? 'bg-white text-purple-700' : 'bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-purple-300'
+                      isActive ? 'bg-white text-purple-700 font-extrabold' : 'bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-purple-300 font-extrabold'
                     }`}>
                       {item.badge}
                     </span>
@@ -216,10 +236,16 @@ export default function AppHeader({
 
       {/* "3 Lines" Full Feature Navigation Drawer / Dropdown */}
       {isMenuOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
-          <div className={`max-w-4xl mx-auto m-4 sm:m-8 rounded-3xl border shadow-2xl p-6 transition-all ${
-            isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
-          }`}>
+        <div 
+          className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-sm animate-fadeIn flex items-start justify-center p-4 sm:p-6"
+          onClick={() => setIsMenuOpen(false)}
+        >
+          <div 
+            className={`w-full max-w-4xl rounded-3xl border shadow-2xl p-6 transition-all my-auto ${
+              isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Drawer Header */}
             <div className="flex items-center justify-between pb-4 border-b border-inherit/40 mb-5">
               <div className="flex items-center gap-2.5">
