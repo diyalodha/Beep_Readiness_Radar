@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import Header from './components/Header';
-import Hero from './components/Hero';
-import LoginScreen from './components/LoginScreen';
-import InternshipExplorer from './components/InternshipExplorer';
-import ResumeUploader from './components/ResumeUploader';
-import ResultsView from './components/ResultsView';
+import AppHeader from './components/AppHeader';
+import DynamicHero from './components/DynamicHero';
 import RoadmapFocusedView from './components/RoadmapFocusedView';
 import AdaptiveQuizView from './components/AdaptiveQuizView';
 import InterviewFocusedView from './components/InterviewFocusedView';
 import ApplicationsView from './components/ApplicationsView';
+import LoginScreen from './components/LoginScreen';
+import InternshipExplorer from './components/InternshipExplorer';
+import ResumeUploader from './components/ResumeUploader';
+import ResultsView from './components/ResultsView';
 import ApplicationModal from './components/ApplicationModal';
 import ApplicationTrackerModal from './components/ApplicationTrackerModal';
 import StatisticsModal from './components/StatisticsModal';
@@ -22,8 +22,8 @@ export default function App() {
     return localStorage.getItem('beep_theme') || 'dark';
   });
 
-  // Active section for seamless feature navigation: 'matcher' | 'resume' | 'roadmap' | 'interview' | 'quiz' | 'applications' | 'analytics'
-  const [activeSection, setActiveSection] = useState('matcher');
+  // Active navigation tab ('matcher' | 'resume' | 'roadmap' | 'interview' | 'quiz' | 'applications' | 'analytics')
+  const [activeTab, setActiveTab] = useState('matcher');
 
   // User state: logged in user profile & JWT token
   const [user, setUser] = useState(() => {
@@ -79,7 +79,7 @@ export default function App() {
   // Statistics Modal state
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
 
-  const [apiStatus, setApiStatus] = useState({
+  const [_apiStatus, setApiStatus] = useState({
     aiEnabled: false,
     engine: 'Checking engine...',
     message: ''
@@ -91,7 +91,7 @@ export default function App() {
   const [customRoleTitle, setCustomRoleTitle] = useState('');
   const [customJd, setCustomJd] = useState('');
 
-  // Resume State
+  // Resume State (Empty by default so user sees the dropzone)
   const [resumeText, setResumeText] = useState('');
   const [fileName, setFileName] = useState('');
 
@@ -228,13 +228,13 @@ export default function App() {
 
     if (!resumeText.trim()) {
       setErrorMessage('Please attach or paste a resume before auditing.');
-      setActiveSection('matcher');
+      setActiveTab('resume');
       return;
     }
 
     if (!targetJobText?.trim()) {
       setErrorMessage('Please select an internship or provide a custom job description.');
-      setActiveSection('matcher');
+      setActiveTab('matcher');
       return;
     }
 
@@ -259,7 +259,7 @@ export default function App() {
 
       const data = await response.json();
       setResult(data);
-      setActiveSection('matcher');
+      setActiveTab('matcher');
 
       setTimeout(() => {
         const el = document.getElementById('results-section');
@@ -285,7 +285,7 @@ export default function App() {
       }
 
       setResult(clientResult);
-      setActiveSection('matcher');
+      setActiveTab('matcher');
 
       setTimeout(() => {
         const el = document.getElementById('results-section');
@@ -311,177 +311,132 @@ export default function App() {
 
   const activeJobTitle = isCustomJob ? (customRoleTitle || 'Custom Role') : selectedInternship?.title;
 
+  // 2. Main Authenticated Application with Centered Dynamic Hero & Top Navigation
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-200 ${
       isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
     }`}>
       
-      {/* 1. Full-Width Sticky Top Header with Feature Navigation Pills */}
-      <Header
-        apiStatus={apiStatus}
-        user={user}
-        onLogout={handleLogout}
+      {/* Top Header Bar with 3-Lines Menu & Feature Navigation */}
+      <AppHeader
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
         theme={theme}
         toggleTheme={toggleTheme}
+        user={user}
+        onLogout={handleLogout}
         applicationsCount={applications.length}
-        onOpenApplications={() => setActiveSection('applications')}
-        onOpenStats={() => setActiveSection('analytics')}
-        onNavigateSection={(sec) => setActiveSection(sec)}
-        activeSection={activeSection}
+        hasResult={Boolean(result)}
       />
 
-      {/* 2. Bold, Centered, Highlighted Hero Section */}
-      <Hero
-        theme={theme}
-        onScrollToRoles={() => {
-          setActiveSection('matcher');
-          setTimeout(() => {
-            const el = document.getElementById('roles-explorer-section');
-            if (el) el.scrollIntoView({ behavior: 'smooth' });
-          }, 50);
-        }}
-        onOpenStats={() => setActiveSection('analytics')}
-        onOpenQuiz={() => setActiveSection('quiz')}
-      />
+      {/* Bold Centered Dynamic Hero (Adapts headline & subtitle to current feature) */}
+      <DynamicHero activeTab={activeTab} theme={theme} />
 
-      {/* 3. Main Full-Width Content Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Main Content Area */}
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
         
-        {/* Error Notification */}
+        {/* Error Banner */}
         {errorMessage && (
-          <div className="max-w-4xl mx-auto mb-6">
-            <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/40 text-rose-600 dark:text-rose-400 text-xs sm:text-sm font-bold flex items-center gap-2.5 shadow-sm">
-              <AlertTriangle className="w-5 h-5 shrink-0" />
+          <div className="mb-6">
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border-2 border-rose-500/40 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-2 shadow-xs">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           </div>
         )}
 
-        {/* SECTION 1: ROLE EXPLORER, RESUME PARSER & COMPLETE AUDIT FLOW */}
-        {activeSection === 'matcher' && (
-          <div className="space-y-8 animate-fadeIn pb-16">
-            
-            {/* Step 1: Curated Roles */}
-            <div id="roles-explorer-section">
-              <InternshipExplorer
-                selectedInternship={selectedInternship}
-                onSelectInternship={handleSelectInternship}
-                onCustomJobSelect={handleCustomJobSelect}
-                isCustomJob={isCustomJob}
-                theme={theme}
-              />
-            </div>
+        {/* FEATURE 1: ROLES & JD MATCHER */}
+        {activeTab === 'matcher' && (
+          <div className="space-y-6 animate-fadeIn pb-12">
+            <InternshipExplorer
+              selectedInternship={selectedInternship}
+              onSelectInternship={handleSelectInternship}
+              onCustomJobSelect={handleCustomJobSelect}
+              isCustomJob={isCustomJob}
+              theme={theme}
+            />
 
-            {/* Step 2: Resume Ingestion */}
-            <div id="resume-section">
-              <ResumeUploader
-                resumeText={resumeText}
-                setResumeText={setResumeText}
-                fileName={fileName}
-                setFileName={setFileName}
-                onSelectSampleResume={handleSelectSampleResume}
-                onRemoveResume={handleRemoveResume}
-                isCustomJob={isCustomJob}
-                customJd={customJd}
-                setCustomJd={setCustomJd}
-                customRoleTitle={customRoleTitle}
-                setCustomRoleTitle={setCustomRoleTitle}
-                theme={theme}
-              />
-            </div>
-
-            {/* Step 3: Run Audit CTA */}
-            <div className="max-w-4xl mx-auto px-4 text-center">
-              <div className={`p-6 sm:p-8 rounded-3xl border transition-colors shadow-sm space-y-4 ${
-                isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200'
+            {/* Quick Resume Reminder if not attached */}
+            {!resumeText && (
+              <div className={`p-4 rounded-3xl border-2 flex items-center justify-between text-xs transition-all ${
+                isDark ? 'bg-slate-900/90 border-slate-700 text-slate-200' : 'bg-white border-slate-300 text-slate-800 shadow-xs'
               }`}>
-                <div>
-                  <h3 className="text-lg sm:text-xl font-black tracking-tight">
-                    Evaluate Your Readiness for {activeJobTitle}
-                  </h3>
-                  <p className={`text-xs sm:text-sm mt-1 max-w-lg mx-auto font-medium ${
-                    isDark ? 'text-slate-300' : 'text-slate-600'
-                  }`}>
-                    {resumeText ? `Using attached candidate resume: ${fileName || 'Ready'}` : 'Attach a resume or pick a sample student profile above to run the evaluation.'}
-                  </p>
+                <div className="flex items-center gap-2.5">
+                  <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <span className="font-semibold">No resume attached yet. Attach your resume to evaluate readiness.</span>
                 </div>
-
                 <button
-                  type="button"
-                  onClick={handleAnalyze}
-                  disabled={isLoading || !resumeText.trim()}
-                  className={`w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-2xl font-black text-xs sm:text-sm shadow-xl transition-all ${
-                    isLoading || !resumeText.trim()
-                      ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700'
-                      : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-500 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-600/30 hover:shadow-purple-600/50 cursor-pointer transform hover:-translate-y-0.5'
-                  }`}
+                  onClick={() => setActiveTab('resume')}
+                  className="px-3.5 py-1.5 rounded-xl font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-xs transition cursor-pointer"
                 >
-                  {isLoading ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                      <span>Auditing readiness against {activeJobTitle}...</span>
-                    </>
-                  ) : !resumeText.trim() ? (
-                    <>
-                      <FileText className="w-4 h-4 text-slate-400" />
-                      <span>Attach Resume Above to Run Audit</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 text-purple-200" />
-                      <span>Audit Readiness for {activeJobTitle}</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
+                  Attach Resume
                 </button>
-              </div>
-            </div>
-
-            {/* Step 4: Results & Diagnostics */}
-            {result && (
-              <div id="results-section">
-                <ResultsView
-                  result={result}
-                  theme={theme}
-                  onApplyClick={() => setIsApplyModalOpen(true)}
-                  onNewAudit={() => {
-                    setResult(null);
-                    window.scrollTo({ top: 300, behavior: 'smooth' });
-                  }}
-                />
               </div>
             )}
 
-          </div>
-        )}
-
-        {/* SECTION 2: DEDICATED RESUME PARSER */}
-        {activeSection === 'resume' && (
-          <div className="space-y-6 animate-fadeIn pb-16 max-w-5xl mx-auto">
-            <div className={`p-6 rounded-3xl border flex items-center justify-between ${
-              isDark ? 'bg-slate-900/70 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+            {/* Audit Trigger CTA */}
+            <div className={`p-6 sm:p-8 rounded-3xl border-2 text-center transition-all shadow-sm space-y-3 ${
+              isDark 
+                ? 'bg-gradient-to-b from-purple-950/30 to-slate-900 border-purple-500/40' 
+                : 'bg-gradient-to-b from-purple-50/80 to-white border-purple-300 shadow-md'
             }`}>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
-                  Client-Side Document Extraction
-                </span>
-                <h2 className="text-xl sm:text-2xl font-black mt-1">Resume Parser & Ingestion</h2>
-                <p className={`text-xs mt-1 font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                  Drop any PDF or DOCX file to extract technical skills and verify formatting client-side.
+                <h3 className={`text-base sm:text-lg font-black ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                  Evaluate Technical Readiness for {activeJobTitle}
+                </h3>
+                <p className={`text-xs mt-1 font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                  {resumeText ? `Using attached file: ${fileName || 'Active resume'}` : 'Click below or switch to the Resume tab to attach your profile.'}
                 </p>
               </div>
 
-              {resumeText && (
-                <button
-                  onClick={() => setActiveSection('matcher')}
-                  className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-2"
-                >
-                  <span>Go to Role Matcher</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleAnalyze}
+                disabled={isLoading || !resumeText.trim()}
+                className={`px-8 py-3.5 rounded-2xl font-black text-xs sm:text-sm shadow-xl transition-all ${
+                  isLoading || !resumeText.trim()
+                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-500 cursor-not-allowed border-2 border-slate-300 dark:border-slate-700'
+                    : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-500 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-600/30 hover:shadow-purple-600/50 cursor-pointer transform hover:-translate-y-0.5'
+                }`}
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Auditing {fileName || 'Resume'} against {activeJobTitle}...</span>
+                  </span>
+                ) : !resumeText.trim() ? (
+                  <span className="flex items-center gap-2" onClick={() => setActiveTab('resume')}>
+                    <FileText className="w-4 h-4" />
+                    <span>Attach Resume to Enable Audit</span>
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    <span>Audit Readiness for {activeJobTitle}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </span>
+                )}
+              </button>
             </div>
 
+            {/* Detailed Results View */}
+            {result && (
+              <ResultsView
+                result={result}
+                theme={theme}
+                onApplyClick={() => setIsApplyModalOpen(true)}
+                onNewAudit={() => {
+                  setResult(null);
+                  window.scrollTo({ top: 350, behavior: 'smooth' });
+                }}
+              />
+            )}
+          </div>
+        )}
+
+        {/* FEATURE 2: RESUME AUDITOR */}
+        {activeTab === 'resume' && (
+          <div className="space-y-6 animate-fadeIn pb-12">
             <ResumeUploader
               resumeText={resumeText}
               setResumeText={setResumeText}
@@ -496,64 +451,68 @@ export default function App() {
               setCustomRoleTitle={setCustomRoleTitle}
               theme={theme}
             />
+
+            {resumeText && (
+              <div className="text-center pt-2">
+                <button
+                  onClick={() => setActiveTab('matcher')}
+                  className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-purple-600/30 transition cursor-pointer inline-flex items-center gap-2"
+                >
+                  <span>Proceed to Target JD Matcher & Audit</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
         )}
 
-        {/* SECTION 3: 48-HOUR PROJECT BLUEPRINT */}
-        {activeSection === 'roadmap' && (
-          <div className="animate-fadeIn">
-            <RoadmapFocusedView
-              result={result}
-              selectedInternship={selectedInternship}
-              onNavigate={(sec) => setActiveSection(sec)}
-              theme={theme}
-            />
-          </div>
+        {/* FEATURE 3: 48-HOUR ROADMAP */}
+        {activeTab === 'roadmap' && (
+          <RoadmapFocusedView
+            result={result}
+            selectedInternship={selectedInternship}
+            onNavigate={(tab) => setActiveTab(tab)}
+            theme={theme}
+          />
         )}
 
-        {/* SECTION 4: INTERVIEW STAR PREP & COLD PITCH */}
-        {activeSection === 'interview' && (
-          <div className="animate-fadeIn">
-            <InterviewFocusedView
-              result={result}
-              selectedInternship={selectedInternship}
-              user={user}
-              onNavigate={(sec) => setActiveSection(sec)}
-              theme={theme}
-            />
-          </div>
+        {/* FEATURE 4: INTERVIEW PREPARATION */}
+        {activeTab === 'interview' && (
+          <InterviewFocusedView
+            result={result}
+            selectedInternship={selectedInternship}
+            user={user}
+            onNavigate={(tab) => setActiveTab(tab)}
+            theme={theme}
+          />
         )}
 
-        {/* SECTION 5: ADAPTIVE CS ASSESSMENT QUIZ */}
-        {activeSection === 'quiz' && (
-          <div className="animate-fadeIn">
-            <AdaptiveQuizView
-              theme={theme}
-              onCompleteQuiz={(quizScore) => {
-                console.log('Quiz scored:', quizScore);
-              }}
-            />
-          </div>
+        {/* FEATURE 5: ADAPTIVE TECH QUIZ */}
+        {activeTab === 'quiz' && (
+          <AdaptiveQuizView
+            theme={theme}
+            onCompleteQuiz={(quizScore) => {
+              console.log('Quiz completed with score:', quizScore);
+            }}
+          />
         )}
 
-        {/* SECTION 6: APPLICATION PIPELINE TRACKER */}
-        {activeSection === 'applications' && (
-          <div className="animate-fadeIn">
-            <ApplicationsView
-              applications={applications}
-              onNavigate={(sec) => setActiveSection(sec)}
-              theme={theme}
-            />
-          </div>
+        {/* FEATURE 6: APPLICATIONS PIPELINE */}
+        {activeTab === 'applications' && (
+          <ApplicationsView
+            applications={applications}
+            onNavigate={(tab) => setActiveTab(tab)}
+            theme={theme}
+          />
         )}
 
-        {/* SECTION 7: PLACEMENT & CANDIDATE ANALYTICS */}
-        {activeSection === 'analytics' && (
-          <div className="animate-fadeIn pb-16">
+        {/* FEATURE 7: PLACEMENT & CANDIDATE ANALYTICS */}
+        {activeTab === 'analytics' && (
+          <div className="pb-12 animate-fadeIn">
             <StatisticsModal
               isOpen={true}
               isInline={true}
-              onClose={() => setActiveSection('matcher')}
+              onClose={() => setActiveTab('matcher')}
               theme={theme}
               user={user}
               result={result}
@@ -564,7 +523,7 @@ export default function App() {
 
       </main>
 
-      {/* Global Modals */}
+      {/* Global Application Submission Modal */}
       <ApplicationModal
         isOpen={isApplyModalOpen}
         onClose={() => setIsApplyModalOpen(false)}
@@ -576,6 +535,7 @@ export default function App() {
         onApplicationSubmitted={handleApplicationSubmitted}
       />
 
+      {/* Applications Tracker Modal */}
       <ApplicationTrackerModal
         isOpen={isApplicationsOpen}
         onClose={() => setIsApplicationsOpen(false)}
@@ -583,6 +543,7 @@ export default function App() {
         theme={theme}
       />
 
+      {/* Campus Placement & Hiring Statistics Modal */}
       <StatisticsModal
         isOpen={isStatsModalOpen}
         isInline={false}
@@ -593,16 +554,16 @@ export default function App() {
         applications={applications}
       />
 
-      {/* Clean Full-Width Footer */}
-      <footer className={`border-t py-8 text-center text-xs transition-colors duration-200 ${
-        isDark ? 'border-slate-800 bg-slate-950 text-slate-400' : 'border-slate-200 bg-white text-slate-600'
+      {/* Clean Centered Footer with Strong Contrast */}
+      <footer className={`border-t py-8 text-center text-xs transition-colors duration-200 mt-auto ${
+        isDark ? 'border-slate-800 bg-slate-950 text-slate-400' : 'border-slate-300 bg-white text-slate-700 shadow-2xs'
       }`}>
-        <div className="max-w-5xl mx-auto px-4 space-y-2">
-          <p className="font-extrabold text-sm text-slate-900 dark:text-slate-100">
+        <div className="max-w-4xl mx-auto px-4 space-y-2">
+          <p className={`font-extrabold text-sm ${isDark ? 'text-white' : 'text-slate-950'}`}>
             EventBeep Founder’s Office • Internship Readiness Radar
           </p>
-          <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-            Closing the student Actionability Gap with deterministic boundary matching, weekend proof-of-work project blueprints, and authenticated application tracking.
+          <p className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            Closing the student Actionability Gap with transparent skill diagnostics, weekend proof-of-work project blueprints, and authenticated application tracking.
           </p>
         </div>
       </footer>

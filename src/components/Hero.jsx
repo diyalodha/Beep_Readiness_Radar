@@ -1,152 +1,94 @@
 import React from 'react';
-import { Target, Zap, Clock, ShieldCheck, Sparkles, ArrowRight } from 'lucide-react';
+import { Target, Zap, Clock } from 'lucide-react';
 
-export default function Hero({ theme, onScrollToRoles, onOpenStats, onOpenQuiz }) {
+export default function Hero({ theme }) {
   const isDark = theme === 'dark';
 
   return (
-    <section className={`relative overflow-hidden pt-12 pb-10 border-b transition-colors duration-200 ${
-      isDark ? 'border-slate-800 bg-slate-950/70' : 'border-slate-200 bg-gradient-to-b from-white via-slate-50 to-slate-100/60'
+    <section className={`relative overflow-hidden pt-10 pb-6 border-b transition-colors duration-200 ${
+      isDark ? 'border-slate-900' : 'border-slate-200/80 bg-slate-50/50'
     }`}>
-      {/* Background Decorative Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[320px] bg-purple-600/10 blur-[130px] pointer-events-none rounded-full" />
+      {/* Background Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-purple-600/10 blur-[120px] pointer-events-none rounded-full" />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center relative z-10">
         
         {/* Mission Pill */}
-        <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-bold mb-5 shadow-sm transition-all ${
+        <div className={`inline-flex items-center gap-2 px-3.5 py-1 rounded-full border text-xs mb-5 shadow-sm transition-all ${
           isDark 
-            ? 'bg-slate-900/90 border-slate-700 text-purple-300 shadow-purple-950/30' 
-            : 'bg-white border-purple-200 text-purple-800 shadow-sm'
+            ? 'bg-slate-900 border-slate-800 text-slate-300' 
+            : 'bg-white border-slate-200 text-slate-700'
         }`}>
-          <Sparkles className="w-3.5 h-3.5 text-purple-600 animate-pulse" />
-          <span>EventBeep Founder’s Office</span>
-          <span className="opacity-40">•</span>
-          <span className="font-semibold">Discovery Assignment Platform</span>
+          <span className="w-2 h-2 rounded-full bg-purple-500 animate-ping" />
+          <span>Solving the Student Actionability Gap for Indian Campuses</span>
         </div>
 
-        {/* Highlighted Bold 2-Line Headline */}
-        <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.15] sm:leading-[1.15] mb-4">
-          <span className={`block ${isDark ? 'text-white' : 'text-slate-950'}`}>
-            Internship Readiness Radar
-          </span>
-          <span className="block mt-1 bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent">
-            Know Your Real Match & 48-Hour Fix.
+        {/* Main Headline */}
+        <h1 className={`text-3xl sm:text-5xl font-black tracking-tight leading-tight sm:leading-tight mb-3 ${
+          isDark ? 'text-white' : 'text-slate-900'
+        }`}>
+          Stop getting ghosted by internships. <br />
+          <span className="bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-500 bg-clip-text text-transparent">
+            Know your real match & 7-day fix.
           </span>
         </h1>
 
-        {/* High-Contrast Subtitle */}
-        <p className={`text-sm sm:text-base max-w-2xl mx-auto mb-8 leading-relaxed font-medium ${
-          isDark ? 'text-slate-200' : 'text-slate-700'
+        {/* Subtitle */}
+        <p className={`text-xs sm:text-sm max-w-2xl mx-auto mb-7 leading-relaxed ${
+          isDark ? 'text-slate-400' : 'text-slate-600'
         }`}>
-          Stop getting ghosted by campus tech roles. Job descriptions are filled with overwhelming buzzwords—audit your resume against verified criteria, diagnose missing skills with token-aware precision, and generate a concrete 48-hour proof-of-work project blueprint.
+          Job descriptions are full of overwhelming buzzwords. Paste your current skills and any internship listing to get a transparent match analysis, critical missing skills, and a weekend proof-of-work project plan.
         </p>
 
-        {/* Quick Action CTAs */}
-        <div className="flex flex-wrap items-center justify-center gap-3 mb-10">
-          <button
-            onClick={onScrollToRoles}
-            className="px-6 py-3 rounded-2xl font-black text-xs sm:text-sm bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-500 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-600/30 hover:shadow-purple-600/50 transition transform hover:-translate-y-0.5 cursor-pointer inline-flex items-center gap-2"
-          >
-            <span>Start Resume & Role Audit</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-
-          {onOpenQuiz && (
-            <button
-              onClick={onOpenQuiz}
-              className={`px-5 py-3 rounded-2xl font-bold text-xs sm:text-sm border transition cursor-pointer inline-flex items-center gap-2 ${
-                isDark 
-                  ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-200' 
-                  : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-800 shadow-sm'
-              }`}
-            >
-              <Zap className="w-4 h-4 text-amber-500" />
-              <span>Adaptive CS Quiz</span>
-            </button>
-          )}
-
-          {onOpenStats && (
-            <button
-              onClick={onOpenStats}
-              className={`px-5 py-3 rounded-2xl font-bold text-xs sm:text-sm border transition cursor-pointer inline-flex items-center gap-2 ${
-                isDark 
-                  ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-200' 
-                  : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-800 shadow-sm'
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              <span>Placement Guidelines</span>
-            </button>
-          )}
-        </div>
-
         {/* 3 Pillars */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 max-w-4xl mx-auto text-left">
-          
-          {/* Pillar 1 */}
-          <div className={`border p-4 rounded-2xl flex items-start gap-3.5 transition-all ${
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl mx-auto text-left">
+          <div className={`border p-3.5 rounded-2xl flex items-start gap-3 transition-all ${
             isDark 
-              ? 'bg-slate-900/80 border-slate-800 text-white shadow-md' 
-              : 'bg-white border-slate-200 shadow-sm text-slate-900'
+              ? 'bg-slate-900/70 border-slate-800/80 text-white' 
+              : 'bg-white border-slate-200/90 shadow-sm text-slate-900'
           }`}>
-            <div className={`p-2.5 rounded-xl mt-0.5 ${
-              isDark ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-100 text-purple-700'
-            }`}>
+            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 mt-0.5">
               <Target className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="text-xs font-bold leading-tight">Token-Aware Matching</h4>
-              <p className={`text-[11px] mt-1 leading-snug font-medium ${
-                isDark ? 'text-slate-300' : 'text-slate-600'
-              }`}>
-                Strict boundary regex checks. No false positives like Java in JavaScript or C in CSS.
+              <h4 className="text-xs font-bold">Transparent Match</h4>
+              <p className={`text-[11px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Clear breakdown of must-haves vs. transferable skills.
               </p>
             </div>
           </div>
 
-          {/* Pillar 2 */}
-          <div className={`border p-4 rounded-2xl flex items-start gap-3.5 transition-all ${
+          <div className={`border p-3.5 rounded-2xl flex items-start gap-3 transition-all ${
             isDark 
-              ? 'bg-slate-900/80 border-slate-800 text-white shadow-md' 
-              : 'bg-white border-slate-200 shadow-sm text-slate-900'
+              ? 'bg-slate-900/70 border-slate-800/80 text-white' 
+              : 'bg-white border-slate-200/90 shadow-sm text-slate-900'
           }`}>
-            <div className={`p-2.5 rounded-xl mt-0.5 ${
-              isDark ? 'bg-pink-500/20 text-pink-300' : 'bg-pink-100 text-pink-700'
-            }`}>
+            <div className="p-2 rounded-xl bg-pink-500/10 text-pink-600 mt-0.5">
               <Zap className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="text-xs font-bold leading-tight">48-Hr Proof of Work</h4>
-              <p className={`text-[11px] mt-1 leading-snug font-medium ${
-                isDark ? 'text-slate-300' : 'text-slate-600'
-              }`}>
-                Tailored architectural spec, Google XYZ resume bullets, and a copyable README.md.
+              <h4 className="text-xs font-bold">48-Hr Proof of Work</h4>
+              <p className={`text-[11px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                1 specific micro-project to prove the missing skill.
               </p>
             </div>
           </div>
 
-          {/* Pillar 3 */}
-          <div className={`border p-4 rounded-2xl flex items-start gap-3.5 transition-all ${
+          <div className={`border p-3.5 rounded-2xl flex items-start gap-3 transition-all ${
             isDark 
-              ? 'bg-slate-900/80 border-slate-800 text-white shadow-md' 
-              : 'bg-white border-slate-200 shadow-sm text-slate-900'
+              ? 'bg-slate-900/70 border-slate-800/80 text-white' 
+              : 'bg-white border-slate-200/90 shadow-sm text-slate-900'
           }`}>
-            <div className={`p-2.5 rounded-xl mt-0.5 ${
-              isDark ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-100 text-indigo-700'
-            }`}>
+            <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 mt-0.5">
               <Clock className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="text-xs font-bold leading-tight">7-Day Sprint & STAR Prep</h4>
-              <p className={`text-[11px] mt-1 leading-snug font-medium ${
-                isDark ? 'text-slate-300' : 'text-slate-600'
-              }`}>
-                Day-by-day remediation sprint, technical interview STAR answers, and cold pitch.
+              <h4 className="text-xs font-bold">7-Day Sprint Plan</h4>
+              <p className={`text-[11px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Daily micro-tasks from learning to outreach.
               </p>
             </div>
           </div>
-
         </div>
 
       </div>

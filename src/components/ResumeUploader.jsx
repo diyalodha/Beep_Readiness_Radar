@@ -159,23 +159,23 @@ export default function ResumeUploader({
 
       {/* If user clicked "Paste Custom JD", show Custom JD input drawer */}
       {isCustomJob && (
-        <div className={`mb-4 p-4 rounded-2xl border transition-colors ${
-          isDark ? 'bg-slate-900 border-indigo-900/60' : 'bg-indigo-50/50 border-indigo-200'
+        <div className={`mb-5 p-5 rounded-3xl border-2 transition-colors ${
+          isDark ? 'bg-slate-900 border-indigo-900/60 text-white' : 'bg-white border-indigo-300 shadow-xs text-slate-900'
         }`}>
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-4 h-4 text-indigo-500" />
-            <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-4 h-4 text-indigo-600" />
+            <h3 className={`text-xs font-extrabold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-950'}`}>
               Custom Internship Details
             </h3>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             <input
               type="text"
               placeholder="Internship Title (e.g. Backend Engineering Intern)"
               value={customRoleTitle}
               onChange={(e) => setCustomRoleTitle(e.target.value)}
-              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900'
+              className={`w-full text-xs p-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold ${
+                isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
               }`}
             />
             <textarea
@@ -183,8 +183,8 @@ export default function ResumeUploader({
               placeholder="Paste the job description and requirements from LinkedIn, Internshala, etc..."
               value={customJd}
               onChange={(e) => setCustomJd(e.target.value)}
-              className={`w-full text-xs p-2.5 rounded-xl border font-mono resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900'
+              className={`w-full text-xs p-3 rounded-xl border font-mono resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                isDark ? 'bg-slate-950 border-slate-700 text-slate-200' : 'bg-slate-50 border-slate-300 text-slate-900'
               }`}
             />
           </div>
@@ -193,14 +193,14 @@ export default function ResumeUploader({
 
       {/* Visible parse error banner (never silent) */}
       {parseError && (
-        <div className={`mb-3 p-3 rounded-xl border flex items-start gap-2 text-xs ${
+        <div className={`mb-4 p-3.5 rounded-2xl border flex items-start gap-2.5 text-xs ${
           isDark
             ? 'bg-rose-950/40 border-rose-500/40 text-rose-200'
-            : 'bg-rose-50 border-rose-300 text-rose-800'
+            : 'bg-rose-50 border-rose-400 text-rose-900 font-medium'
         }`}>
           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
           <div>
-            <p className="font-bold">Could not read that file</p>
+            <p className="font-extrabold">Could not read that file</p>
             <p className="opacity-90 mt-0.5">{parseError}</p>
           </div>
         </div>
@@ -208,10 +208,10 @@ export default function ResumeUploader({
 
       {/* STATE A: RESUME IS ATTACHED */}
       {resumeText ? (
-        <div className={`p-5 rounded-2xl border transition-all shadow-md ${
+        <div className={`p-5 sm:p-6 rounded-3xl border-2 transition-all shadow-md ${
           isDark 
-            ? 'bg-slate-900/90 border-purple-500/40 ring-1 ring-purple-500/20' 
-            : 'bg-white border-purple-300 shadow-purple-500/5 ring-1 ring-purple-400/30'
+            ? 'bg-slate-900 border-purple-500/60 ring-1 ring-purple-500/30' 
+            : 'bg-white border-purple-400 shadow-purple-500/10 ring-2 ring-purple-400/30'
         }`}>
           
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -316,60 +316,60 @@ export default function ResumeUploader({
             onClick={() => fileInputRef.current?.click()}
             className={`border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all ${
               isDragging
-                ? 'border-purple-500 bg-purple-500/10 scale-[1.01]'
+                ? 'border-purple-600 bg-purple-500/10 scale-[1.01]'
                 : (isDark
-                    ? 'border-slate-800 bg-slate-900/40 hover:border-purple-500/50 hover:bg-slate-900/80'
-                    : 'border-slate-300 bg-white hover:border-purple-400 hover:bg-purple-50/20 shadow-sm')
+                    ? 'border-slate-700 bg-slate-900/70 hover:border-purple-500 hover:bg-slate-900'
+                    : 'border-slate-400 bg-white hover:border-purple-600 hover:bg-purple-50/30 shadow-xs hover:shadow-md')
             }`}
           >
-            <div className="w-14 h-14 rounded-2xl bg-purple-600/10 text-purple-600 dark:text-purple-400 flex items-center justify-center mx-auto mb-3 shadow-inner">
+            <div className="w-14 h-14 rounded-2xl bg-purple-600/10 text-purple-600 dark:text-purple-400 flex items-center justify-center mx-auto mb-3 border border-purple-500/20 shadow-xs">
               {isParsing ? <RefreshCw className="w-7 h-7 animate-spin" /> : <UploadCloud className="w-7 h-7" />}
             </div>
 
-            <h3 className={`text-sm sm:text-base font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <h3 className={`text-base font-extrabold ${isDark ? 'text-white' : 'text-slate-950 font-black'}`}>
               {isParsing ? 'Parsing your resume...' : 'Drop your Resume here, or click to browse'}
             </h3>
             
-            <p className={`text-xs mt-1.5 max-w-md mx-auto font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-              Supported: PDF (parsed with pdf.js), DOCX (Mammoth), RTF, TXT, MD. Max file size 5 MB. Scanned image PDFs are not supported without OCR.
+            <p className={`text-xs mt-1.5 max-w-md mx-auto font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              Supported: PDF (parsed via pdf.js), DOCX (Mammoth), RTF, TXT, MD. Max file size 5 MB.
             </p>
 
-            <div className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-md transition">
+            <div className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-md transition cursor-pointer">
               <FileText className="w-3.5 h-3.5" />
               <span>Select Resume File</span>
             </div>
           </div>
 
           {/* Fallback Option: 1-Click Sample Resumes */}
-          <div className={`p-4 rounded-2xl border transition-colors ${
-            isDark ? 'bg-slate-900/50 border-slate-800/80' : 'bg-slate-50 border-slate-200'
+          <div className={`p-5 rounded-3xl border-2 transition-colors ${
+            isDark ? 'bg-slate-900/70 border-slate-800' : 'bg-white border-slate-300 shadow-xs'
           }`}>
-            <span className={`text-[11px] font-bold uppercase tracking-wider block mb-2 ${
-              isDark ? 'text-slate-300' : 'text-slate-700'
+            <span className={`text-xs font-extrabold uppercase tracking-wider block mb-3 ${
+              isDark ? 'text-slate-300' : 'text-slate-900'
             }`}>
               Or test with sample student profiles:
             </span>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {SAMPLE_RESUMES.map((res) => (
                 <button
                   key={res.id}
                   type="button"
                   onClick={() => handleSampleSelect(res)}
-                  className={`text-left p-3 rounded-xl border transition-all cursor-pointer ${
+                  className={`text-left p-3.5 rounded-2xl border transition-all cursor-pointer ${
                     isDark 
-                      ? 'bg-slate-950 border-slate-800 hover:border-purple-500/50 text-slate-200 hover:bg-slate-900' 
-                      : 'bg-white border-slate-200 hover:border-purple-300 text-slate-800 hover:bg-purple-50/30 shadow-xs'
+                      ? 'bg-slate-950 border-slate-800 hover:border-purple-500 text-slate-200 hover:bg-slate-900' 
+                      : 'bg-slate-50 border-slate-300 hover:border-purple-500 text-slate-800 hover:bg-purple-50/40 shadow-2xs hover:shadow-xs'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-600/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
                       {res.tag}
                     </span>
-                    <ArrowRight className="w-3 h-3 text-slate-400" />
+                    <ArrowRight className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                   </div>
-                  <h4 className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-950'}`}>{res.label}</h4>
-                  <p className={`text-[10px] mt-0.5 font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{res.summary}</p>
+                  <h4 className={`text-xs font-extrabold ${isDark ? 'text-white' : 'text-slate-950'}`}>{res.label}</h4>
+                  <p className={`text-[11px] mt-1 font-medium leading-snug ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{res.summary}</p>
                 </button>
               ))}
             </div>

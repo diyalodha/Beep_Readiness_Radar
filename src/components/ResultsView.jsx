@@ -156,15 +156,15 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         
         {/* Score Card */}
-        <div className={`border rounded-2xl p-6 flex flex-col justify-between shadow-lg transition-colors ${
-          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
+        <div className={`border-2 rounded-2xl p-6 flex flex-col justify-between shadow-md transition-colors ${
+          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-300'
         }`}>
           <div>
             <div className="flex items-center justify-between">
-              <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
                 Dynamic Readiness Score
               </span>
-              <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-800'}`}>
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${isDark ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-300 text-slate-800 font-bold'}`}>
                 {result.resumeStats?.wordCount || 120} words
               </span>
             </div>
@@ -173,7 +173,7 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
               <span className={`text-6xl font-black tracking-tight ${getScoreColor(result.matchScore).split(' ')[0]}`}>
                 {result.matchScore}%
               </span>
-              <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              <span className={`text-xs font-bold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                 match for this role
               </span>
             </div>
@@ -187,21 +187,21 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
 
           {/* Scoring Methodology Breakdown */}
           <div className={`mt-6 pt-4 border-t space-y-2 text-xs ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-            <div className={`flex justify-between font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              <span>Must-Have Skills Match:</span>
-              <span className={`font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+            <div className={`flex justify-between ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
+              <span className="font-medium">Must-Have Skills Match:</span>
+              <span className={`font-bold ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>
                 {result.scoreBreakdown?.mustHaveCoverage || '65%'}
               </span>
             </div>
-            <div className={`flex justify-between font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              <span>Transferable Skills Bonus:</span>
+            <div className={`flex justify-between ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
+              <span className="font-medium">Transferable Skills Bonus:</span>
               <span className="font-bold text-purple-600 dark:text-purple-400">
                 {result.scoreBreakdown?.transferableBonus || '+15%'}
               </span>
             </div>
-            <div className={`flex justify-between font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              <span>ATS Filter Risk:</span>
-              <span className="font-bold text-rose-500">
+            <div className={`flex justify-between ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
+              <span className="font-medium">ATS Filter Risk:</span>
+              <span className="font-bold text-rose-600 dark:text-rose-400">
                 {result.scoreBreakdown?.riskFactor || 'Medium'}
               </span>
             </div>
@@ -209,44 +209,44 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
         </div>
 
         {/* Recruiter Insight Card */}
-        <div className={`lg:col-span-2 border rounded-2xl p-6 flex flex-col justify-between shadow-lg transition-colors ${
-          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
+        <div className={`lg:col-span-2 border-2 rounded-2xl p-6 flex flex-col justify-between shadow-md transition-colors ${
+          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-300'
         }`}>
           <div>
             <div className="flex items-center gap-2 mb-3">
               <UserCheck className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+              <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-100' : 'text-slate-950'}`}>
                 Recruiter Reality Check ({result.company || 'Hiring Team'})
               </h3>
             </div>
-            <div className={`border rounded-xl p-4 text-sm leading-relaxed italic ${
+            <div className={`border-2 rounded-xl p-4 text-sm leading-relaxed italic font-medium ${
               isDark 
                 ? 'bg-slate-950 border-slate-800 text-slate-300' 
-                : 'bg-slate-50 border-slate-200 text-slate-700'
+                : 'bg-slate-50 border-slate-300 text-slate-900 shadow-xs'
             }`}>
               "{result.recruiterInsight}"
             </div>
           </div>
 
           {/* Proof of Work Highlight */}
-          <div className={`mt-5 pt-4 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border ${
+          <div className={`mt-5 pt-4 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border-2 ${
             isDark 
               ? 'border-slate-800 bg-purple-950/20 border-purple-900/30' 
-              : 'border-purple-200 bg-purple-50/60'
+              : 'border-purple-300 bg-purple-50/70 shadow-xs'
           }`}>
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 flex items-center gap-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-400 flex items-center gap-1">
                 <Flame className="w-3.5 h-3.5 text-amber-500" />
                 The Recommended 48-Hour Fix
               </span>
-              <h4 className={`text-xs font-bold mt-0.5 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+              <h4 className={`text-xs font-black mt-0.5 ${isDark ? 'text-slate-100' : 'text-slate-950'}`}>
                 {result.proofOfWorkProject?.title || 'Mini-Proof Web App'}
               </h4>
-              <p className={`text-[11px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              <p className={`text-[11px] font-medium mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
                 {result.proofOfWorkProject?.deliverable}
               </p>
             </div>
-            <span className="shrink-0 text-xs font-semibold px-2.5 py-1 rounded-md bg-purple-600 text-white shadow-sm">
+            <span className="shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white shadow-sm">
               {result.proofOfWorkProject?.estimatedHours || '6-8 hrs'}
             </span>
           </div>
@@ -255,18 +255,18 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
       </div>
 
       {/* 3. DEDICATED EVIDENCE-BASED STATISTICS & ATS SCREENING HUB */}
-      <div className={`border rounded-2xl p-6 shadow-lg transition-colors ${
-        isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
+      <div className={`border-2 rounded-2xl p-6 shadow-md transition-colors ${
+        isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-300'
       }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
           <div className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-            <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+            <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-100' : 'text-slate-950'}`}>
               ATS & Recruiter Screening Statistics
             </h3>
           </div>
-          <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
-            isDark ? 'bg-purple-950/40 border-purple-500/30 text-purple-300' : 'bg-purple-50 border-purple-200 text-purple-700'
+          <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+            isDark ? 'bg-purple-950/40 border-purple-500/30 text-purple-300' : 'bg-purple-50 border-purple-300 text-purple-800'
           }`}>
             Evidence-Based Resume Audit
           </span>
@@ -275,10 +275,10 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
         {/* 4 Metric Counter Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
           
-          <div className={`p-4 rounded-xl border ${
-            isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
+          <div className={`p-4 rounded-xl border-2 ${
+            isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-300 shadow-xs'
           }`}>
-            <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
               Resume Readiness Indicator
             </span>
             <div className="flex items-baseline gap-2 mt-1">
@@ -289,64 +289,64 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
                 Heuristic
               </span>
             </div>
-            <p className={`text-[10px] mt-1 line-clamp-1 font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+            <p className={`text-[10px] font-medium mt-1 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
               Estimated keyword coverage
             </p>
           </div>
 
-          <div className={`p-4 rounded-xl border ${
-            isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
+          <div className={`p-4 rounded-xl border-2 ${
+            isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-300 shadow-xs'
           }`}>
-            <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
               Core Tech Coverage
             </span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
                 {detailedStats.coreSkillMatchPercent}%
               </span>
-              <span className={`text-[10px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+              <span className={`text-[10px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
                 of required stack
               </span>
             </div>
-            <p className={`text-[10px] mt-1 line-clamp-1 font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+            <p className={`text-[10px] font-medium mt-1 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
               Exact & canonical matches
             </p>
           </div>
 
-          <div className={`p-4 rounded-xl border ${
-            isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
+          <div className={`p-4 rounded-xl border-2 ${
+            isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-300 shadow-xs'
           }`}>
-            <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
               Quantifiable Metrics
             </span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
                 {detailedStats.metricMatches}
               </span>
-              <span className={`text-[10px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+              <span className={`text-[10px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
                 detected
               </span>
             </div>
-            <p className={`text-[10px] mt-1 line-clamp-1 font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+            <p className={`text-[10px] font-medium mt-1 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
               Numeric achievement metrics
             </p>
           </div>
 
-          <div className={`p-4 rounded-xl border ${
-            isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-200'
+          <div className={`p-4 rounded-xl border-2 ${
+            isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-300 shadow-xs'
           }`}>
-            <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
               Distinct Action Verbs
             </span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-2xl font-black text-amber-500">
                 {detailedStats.actionVerbCount}
               </span>
-              <span className={`text-[10px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+              <span className={`text-[10px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
                 unique verbs
               </span>
             </div>
-            <p className={`text-[10px] mt-1 line-clamp-1 font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+            <p className={`text-[10px] font-medium mt-1 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
               Action-oriented verbs
             </p>
           </div>
@@ -355,25 +355,25 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
 
         {/* 4-Item Recruiter Filter Checklist */}
         <div className="space-y-2">
-          <span className={`text-xs font-bold uppercase tracking-wider block mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+          <span className={`text-xs font-bold uppercase tracking-wider block mb-2 ${isDark ? 'text-slate-300' : 'text-slate-800'}`}>
             6-Second Recruiter Filter Checklist
           </span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {detailedStats.filterChecklist?.map((item, idx) => (
               <div 
                 key={idx}
-                className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
+                className={`p-3 rounded-xl border-2 flex items-center justify-between text-xs ${
                   item.status === 'pass'
-                    ? (isDark ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-200' : 'bg-emerald-50/70 border-emerald-200 text-emerald-900')
+                    ? (isDark ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-200' : 'bg-emerald-50 border-emerald-300 text-emerald-950 font-medium')
                     : item.status === 'warning'
-                      ? (isDark ? 'bg-amber-950/20 border-amber-500/30 text-amber-200' : 'bg-amber-50/70 border-amber-200 text-amber-900')
-                      : (isDark ? 'bg-rose-950/20 border-rose-500/30 text-rose-200' : 'bg-rose-50/70 border-rose-200 text-rose-900')
+                      ? (isDark ? 'bg-amber-950/20 border-amber-500/30 text-amber-200' : 'bg-amber-50 border-amber-300 text-amber-950 font-medium')
+                      : (isDark ? 'bg-rose-950/20 border-rose-500/30 text-rose-200' : 'bg-rose-50 border-rose-300 text-rose-950 font-medium')
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  {item.status === 'pass' && <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />}
-                  {item.status === 'warning' && <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />}
-                  {item.status === 'fail' && <ShieldAlert className="w-4 h-4 text-rose-500 shrink-0" />}
+                  {item.status === 'pass' && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
+                  {item.status === 'warning' && <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />}
+                  {item.status === 'fail' && <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />}
                   <div>
                     <span className="font-bold block leading-tight">{item.name}</span>
                     <span className="text-[10px] opacity-80">{item.detail}</span>
@@ -391,18 +391,18 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
 
       {/* 4. SILENT REJECTION RADAR */}
       {result.silentRejectionFlags && result.silentRejectionFlags.length > 0 && (
-        <div className={`border rounded-2xl p-6 shadow-lg transition-colors ${
-          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
+        <div className={`border-2 rounded-2xl p-6 shadow-md transition-colors ${
+          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-300'
         }`}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 text-amber-500" />
-              <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+              <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-100' : 'text-slate-950'}`}>
                 The Silent Rejection Radar (Recruiter Filter Simulator)
               </h3>
             </div>
-            <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
-              isDark ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-amber-50 border-amber-300 text-amber-700'
+            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+              isDark ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-amber-50 border-amber-300 text-amber-800'
             }`}>
               Hidden ATS & Recruiter Checks
             </span>
@@ -412,25 +412,25 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
             {result.silentRejectionFlags.map((flag, fIdx) => (
               <div
                 key={fIdx}
-                className={`p-3.5 rounded-xl border flex flex-col justify-between ${
+                className={`p-3.5 rounded-xl border-2 flex flex-col justify-between ${
                   flag.type === 'critical'
-                    ? (isDark ? 'bg-rose-950/30 border-rose-900/50 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-900')
+                    ? (isDark ? 'bg-rose-950/30 border-rose-900/50 text-rose-300' : 'bg-rose-50 border-rose-300 text-rose-950')
                     : flag.type === 'warning'
-                      ? (isDark ? 'bg-amber-950/30 border-amber-900/50 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-900')
-                      : (isDark ? 'bg-emerald-950/30 border-emerald-900/50 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-900')
+                      ? (isDark ? 'bg-amber-950/30 border-amber-900/50 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-950')
+                      : (isDark ? 'bg-emerald-950/30 border-emerald-900/50 text-emerald-300' : 'bg-emerald-50 border-emerald-300 text-emerald-950')
                 }`}
               >
                 <div>
                   <div className="flex items-center gap-1.5 mb-1.5">
-                    {flag.type === 'critical' && <ShieldAlert className="w-4 h-4 text-rose-500 shrink-0" />}
-                    {flag.type === 'warning' && <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />}
-                    {flag.type === 'pass' && <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />}
+                    {flag.type === 'critical' && <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />}
+                    {flag.type === 'warning' && <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />}
+                    {flag.type === 'pass' && <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />}
                     <h4 className="text-xs font-bold leading-tight">{flag.title}</h4>
                   </div>
-                  <p className="text-[11px] leading-relaxed opacity-90">{flag.description}</p>
+                  <p className="text-[11px] leading-relaxed font-medium opacity-90">{flag.description}</p>
                 </div>
 
-                <div className="mt-2.5 pt-2 border-t border-current/10 text-[10px] font-mono font-bold uppercase tracking-wider">
+                <div className="mt-2.5 pt-2 border-t border-current/15 text-[10px] font-mono font-bold uppercase tracking-wider">
                   {flag.type === 'critical' && '⚠️ High Screening Risk (Critical Gap)'}
                   {flag.type === 'warning' && '⚡ Fix Recommended Before Applying'}
                   {flag.type === 'pass' && '✅ Recruiter Check Passed'}
@@ -442,13 +442,13 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
       )}
 
       {/* 5. INTERACTIVE ATS KEYWORD MATRIX / CLOUD */}
-      <div className={`border rounded-2xl p-6 shadow-lg transition-colors ${
-        isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
+      <div className={`border-2 rounded-2xl p-6 shadow-md transition-colors ${
+        isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-300'
       }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <Layers className="w-4 h-4 text-indigo-500" />
-            <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+            <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-100' : 'text-slate-950'}`}>
               ATS Keyword Density & Gap Matrix
             </h3>
           </div>
@@ -457,40 +457,40 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
             <button
               onClick={() => setActiveKeywordFilter('all')}
-              className={`px-2.5 py-1 rounded-lg font-medium transition ${
+              className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
                 activeKeywordFilter === 'all'
                   ? 'bg-purple-600 text-white shadow-sm'
-                  : (isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')
+                  : (isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 border border-slate-300 text-slate-800 hover:bg-slate-200')
               }`}
             >
               All ({allHeatmap.length})
             </button>
             <button
               onClick={() => setActiveKeywordFilter('matched')}
-              className={`px-2.5 py-1 rounded-lg font-medium transition ${
+              className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
                 activeKeywordFilter === 'matched'
                   ? 'bg-emerald-600 text-white shadow-sm'
-                  : (isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')
+                  : (isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 border border-slate-300 text-slate-800 hover:bg-slate-200')
               }`}
             >
               Matched ({allHeatmap.filter(i => i.status === 'matched').length})
             </button>
             <button
               onClick={() => setActiveKeywordFilter('transferable')}
-              className={`px-2.5 py-1 rounded-lg font-medium transition ${
+              className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
                 activeKeywordFilter === 'transferable'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : (isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')
+                  : (isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 border border-slate-300 text-slate-800 hover:bg-slate-200')
               }`}
             >
               Transferable ({allHeatmap.filter(i => i.status === 'transferable').length})
             </button>
             <button
               onClick={() => setActiveKeywordFilter('missing')}
-              className={`px-2.5 py-1 rounded-lg font-medium transition ${
+              className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
                 activeKeywordFilter === 'missing'
                   ? 'bg-rose-600 text-white shadow-sm'
-                  : (isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')
+                  : (isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 border border-slate-300 text-slate-800 hover:bg-slate-200')
               }`}
             >
               Critical Gaps ({allHeatmap.filter(i => i.status === 'missing').length})
@@ -504,25 +504,25 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
             filteredHeatmap.map((chip, idx) => (
               <div
                 key={idx}
-                className={`px-3 py-2 rounded-xl border flex items-center gap-2 text-xs transition ${
+                className={`px-3 py-2 rounded-xl border-2 flex items-center gap-2 text-xs font-semibold transition ${
                   chip.status === 'matched'
-                    ? (isDark ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200' : 'bg-emerald-50 border-emerald-300 text-emerald-900')
+                    ? (isDark ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200' : 'bg-emerald-50 border-emerald-300 text-emerald-950 shadow-xs')
                     : chip.status === 'transferable'
-                      ? (isDark ? 'bg-blue-950/40 border-blue-500/40 text-blue-200' : 'bg-blue-50 border-blue-300 text-blue-900')
-                      : (isDark ? 'bg-rose-950/40 border-rose-500/40 text-rose-200' : 'bg-rose-50 border-rose-300 text-rose-900')
+                      ? (isDark ? 'bg-blue-950/40 border-blue-500/40 text-blue-200' : 'bg-blue-50 border-blue-300 text-blue-950 shadow-xs')
+                      : (isDark ? 'bg-rose-950/40 border-rose-500/40 text-rose-200' : 'bg-rose-50 border-rose-300 text-rose-950 shadow-xs')
                 }`}
               >
-                {chip.status === 'matched' && <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
-                {chip.status === 'transferable' && <HelpCircle className="w-3.5 h-3.5 text-blue-500 shrink-0" />}
-                {chip.status === 'missing' && <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />}
+                {chip.status === 'matched' && <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                {chip.status === 'transferable' && <HelpCircle className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                {chip.status === 'missing' && <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />}
                 <div>
                   <span className="font-bold">{chip.keyword}</span>
-                  <span className="opacity-75 text-[10px] ml-1.5 font-mono">({chip.label})</span>
+                  <span className="opacity-80 text-[10px] ml-1.5 font-mono">({chip.label})</span>
                 </div>
               </div>
             ))
           ) : (
-            <p className={`text-xs py-4 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-xs py-4 font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
               No keywords in this category.
             </p>
           )}
@@ -531,24 +531,24 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
 
       {/* 6. AI RECRUITER INTERVIEW PREDICTOR (GAP-BASED Q&A) */}
       {result.interviewQuestions && result.interviewQuestions.length > 0 && (
-        <div className={`border rounded-2xl p-6 shadow-lg transition-colors ${
-          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
+        <div className={`border-2 rounded-2xl p-6 shadow-md transition-colors ${
+          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-300'
         }`}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
             <div className="flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+              <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-100' : 'text-slate-950'}`}>
                 AI Recruiter Interview Predictor (Gap-Based Q&A)
               </h3>
             </div>
-            <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
-              isDark ? 'bg-purple-950/40 border-purple-500/30 text-purple-300' : 'bg-purple-50 border-purple-200 text-purple-700'
+            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+              isDark ? 'bg-purple-950/40 border-purple-500/30 text-purple-300' : 'bg-purple-50 border-purple-300 text-purple-800'
             }`}>
               Anticipate Tough Technical Screening Questions
             </span>
           </div>
 
-          <p className={`text-xs mb-4 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+          <p className={`text-xs mb-4 font-medium ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
             Based on the gap between your resume and {result.company}'s requirements, here are 3 questions technical interviewers will ask:
           </p>
 
@@ -558,10 +558,10 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
               return (
                 <div 
                   key={idx}
-                  className={`border rounded-xl p-4 transition-all ${
+                  className={`border-2 rounded-xl p-4 transition-all ${
                     isDark 
                       ? 'bg-slate-950/80 border-slate-800 hover:border-slate-700' 
-                      : 'bg-slate-50 border-slate-200 hover:border-purple-200'
+                      : 'bg-slate-50 border-slate-300 hover:border-purple-300 shadow-xs'
                   }`}
                 >
                   <div 
@@ -569,34 +569,34 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
                     className="flex items-start justify-between gap-3 cursor-pointer select-none"
                   >
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-600/10 text-purple-600 border border-purple-500/20">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-600/10 text-purple-700 dark:text-purple-300 border border-purple-500/30">
                         {q.topic}
                       </span>
-                      <h4 className={`text-xs sm:text-sm font-bold mt-1.5 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                      <h4 className={`text-xs sm:text-sm font-bold mt-1.5 ${isDark ? 'text-slate-100' : 'text-slate-950'}`}>
                         "{q.question}"
                       </h4>
                     </div>
-                    <button className="p-1 text-slate-400">
+                    <button className="p-1 text-slate-500 dark:text-slate-400">
                       {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </button>
                   </div>
 
                   {isExpanded && (
                     <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2 text-xs animate-fadeIn">
-                      <div className={`p-2.5 rounded-lg border ${
-                        isDark ? 'bg-purple-950/20 border-purple-900/30 text-purple-200' : 'bg-purple-50/70 border-purple-200 text-purple-900'
+                      <div className={`p-2.5 rounded-lg border-2 ${
+                        isDark ? 'bg-purple-950/20 border-purple-900/30 text-purple-200' : 'bg-purple-50 border-purple-200 text-purple-950'
                       }`}>
                         <span className="font-bold block text-[11px]">🧠 Why Recruiters Ask This:</span>
-                        <p className="text-[11px] mt-0.5 opacity-90">{q.recruiterIntent}</p>
+                        <p className="text-[11px] mt-0.5 font-medium">{q.recruiterIntent}</p>
                       </div>
 
-                      <div className={`p-3 rounded-lg border ${
-                        isDark ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700'
+                      <div className={`p-3 rounded-lg border-2 ${
+                        isDark ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-300 text-slate-800 shadow-xs'
                       }`}>
                         <span className="font-bold block text-[11px] text-emerald-600 dark:text-emerald-400">
                           🎯 Smart Anchor Answer:
                         </span>
-                        <p className="text-xs mt-1 leading-relaxed italic">{q.recommendedAnswer}</p>
+                        <p className="text-xs mt-1 leading-relaxed italic font-medium">{q.recommendedAnswer}</p>
                       </div>
                     </div>
                   )}
@@ -609,8 +609,8 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
 
       {/* 7. 48-HOUR PROOF-OF-WORK PROJECT BLUEPRINT */}
       {result.proofOfWorkProject && (
-        <div className={`border rounded-2xl p-6 shadow-lg transition-colors ${
-          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
+        <div className={`border-2 rounded-2xl p-6 shadow-md transition-colors ${
+          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-300'
         }`}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
             <div className="flex items-center gap-2">
@@ -626,15 +626,15 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Overview & Architecture */}
-            <div className={`p-4 rounded-xl border flex flex-col justify-between ${
-              isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
+            <div className={`p-4 rounded-xl border-2 flex flex-col justify-between ${
+              isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-300 shadow-xs'
             }`}>
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 block mb-1">
                   Deliverable Spec
                 </span>
                 <h4 className="text-sm font-extrabold mb-1">{result.proofOfWorkProject.title}</h4>
-                <p className={`text-xs leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                <p className={`text-xs leading-relaxed font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                   {result.proofOfWorkProject.deliverable}
                 </p>
 
@@ -642,7 +642,7 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
                   <span className="text-[10px] font-bold uppercase tracking-wider block mb-1">
                     System Architecture:
                   </span>
-                  <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  <p className={`text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
                     {result.proofOfWorkProject.architectureOverview || 'Frontend client with modular component architecture, automated tests, and live Vercel/Render deployment.'}
                   </p>
                 </div>
@@ -650,26 +650,26 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
             </div>
 
             {/* GitHub README Boilerplate */}
-            <div className={`p-4 rounded-xl border flex flex-col justify-between ${
-              isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
+            <div className={`p-4 rounded-xl border-2 flex flex-col justify-between ${
+              isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-300 shadow-xs'
             }`}>
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 text-slate-400">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
                     <FileText className="w-3.5 h-3.5" />
                     GitHub README.md Boilerplate
                   </span>
                   <button
                     onClick={() => handleCopy(result.proofOfWorkProject.readmeTemplate, 'readme')}
-                    className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border border-purple-500/40 text-purple-500 hover:bg-purple-500/10 font-medium transition cursor-pointer"
+                    className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg border-2 border-purple-500/40 text-purple-700 dark:text-purple-400 hover:bg-purple-500/10 font-bold transition cursor-pointer"
                   >
                     {copiedReadme ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
                     <span>{copiedReadme ? 'Copied README!' : 'Copy README'}</span>
                   </button>
                 </div>
 
-                <div className={`p-3 rounded-lg font-mono text-[11px] max-h-36 overflow-y-auto whitespace-pre-wrap ${
-                  isDark ? 'bg-slate-900 text-slate-300' : 'bg-white border text-slate-700'
+                <div className={`p-3 rounded-lg font-mono text-[11px] max-h-36 overflow-y-auto whitespace-pre-wrap border-2 ${
+                  isDark ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-300 text-slate-900 shadow-xs'
                 }`}>
                   {result.proofOfWorkProject.readmeTemplate || '# Proof of Work Demo\n\nBuild and deploy to Vercel/Render.'}
                 </div>
@@ -680,39 +680,39 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
       )}
 
       {/* 8. 7-DAY DAY-BY-DAY PREPARATION PLAN */}
-      <div className={`border rounded-2xl p-6 shadow-lg transition-colors ${
-        isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
+      <div className={`border-2 rounded-2xl p-6 shadow-md transition-colors ${
+        isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-300'
       }`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-            <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+            <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-100' : 'text-slate-950'}`}>
               7-Day Sprint: Zero to Interview-Ready
             </h3>
           </div>
-          <span className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+          <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             Designed for college student schedules
           </span>
         </div>
 
         <div className="space-y-3">
           {result.sevenDayPlan?.map((planItem, idx) => (
-            <div key={idx} className={`border rounded-xl p-4 transition ${
+            <div key={idx} className={`border-2 rounded-xl p-4 transition ${
               isDark 
                 ? 'bg-slate-950 border-slate-800 hover:border-slate-700' 
-                : 'bg-slate-50 border-slate-200 hover:bg-slate-100/60'
+                : 'bg-slate-50 border-slate-300 hover:border-purple-300 shadow-xs'
             }`}>
               <div className="flex items-center justify-between gap-2 mb-2">
                 <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-purple-600 text-white">
                   {planItem.day}
                 </span>
-                <span className={`text-xs font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                <span className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>
                   {planItem.phase}
                 </span>
               </div>
               <ul className="space-y-1.5 mt-2">
                 {planItem.tasks.map((task, tIdx) => (
-                  <li key={tIdx} className={`text-xs flex items-start gap-2 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                  <li key={tIdx} className={`text-xs flex items-start gap-2 font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                     <span className="text-purple-600 dark:text-purple-400 font-bold">•</span>
                     <span>{task}</span>
                   </li>
@@ -727,32 +727,32 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         
         {/* Tailored Resume Bullets */}
-        <div className={`border rounded-2xl p-6 shadow-lg flex flex-col justify-between transition-colors ${
-          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
+        <div className={`border-2 rounded-2xl p-6 shadow-md flex flex-col justify-between transition-colors ${
+          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-300'
         }`}>
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Terminal className="w-4 h-4 text-emerald-500" />
-              <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+              <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-100' : 'text-slate-950'}`}>
                 Tailored Resume Bullets (Google XYZ Formula)
               </h3>
             </div>
-            <p className={`text-xs mb-4 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-xs mb-4 font-medium ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
               Copy and adapt these metric-driven bullets directly into your resume:
             </p>
 
             <div className="space-y-3">
               {result.applicationBooster?.tailoredBullets?.map((bullet, idx) => (
-                <div key={idx} className={`border rounded-xl p-3 text-xs relative group ${
-                  isDark ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+                <div key={idx} className={`border-2 rounded-xl p-3 text-xs relative group ${
+                  isDark ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-300 text-slate-800 shadow-xs'
                 }`}>
-                  <p className="pr-8 leading-relaxed font-sans">{bullet}</p>
+                  <p className="pr-8 leading-relaxed font-sans font-medium">{bullet}</p>
                   <button
                     onClick={() => handleCopy(bullet, 'bullet', idx)}
-                    className={`absolute top-2.5 right-2.5 p-1.5 rounded-md border transition ${
+                    className={`absolute top-2.5 right-2.5 p-1.5 rounded-md border-2 transition ${
                       isDark 
                         ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-400 hover:text-white' 
-                        : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-600 hover:text-slate-900 shadow-sm'
+                        : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700 hover:text-slate-950 shadow-xs'
                     }`}
                     title="Copy bullet"
                   >
@@ -765,37 +765,37 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
         </div>
 
         {/* Cold Outreach DM */}
-        <div className={`border rounded-2xl p-6 shadow-lg flex flex-col justify-between transition-colors ${
-          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200'
+        <div className={`border-2 rounded-2xl p-6 shadow-md flex flex-col justify-between transition-colors ${
+          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-300'
         }`}>
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-pink-500" />
-                <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-100' : 'text-slate-950'}`}>
                   Recruiter / Founder Cold Outreach
                 </h3>
               </div>
               <button
                 onClick={() => handleCopy(result.applicationBooster?.coldPitchMessage, 'coldPitch')}
-                className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md bg-purple-600 hover:bg-purple-500 text-white font-medium transition shadow-sm cursor-pointer"
+                className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold transition shadow-sm cursor-pointer"
               >
                 {copiedColdPitch ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                {copiedColdPitch ? 'Copied DM!' : 'Copy Pitch'}
+                <span>{copiedColdPitch ? 'Copied DM!' : 'Copy Pitch'}</span>
               </button>
             </div>
-            <p className={`text-xs mb-4 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-xs mb-4 font-medium ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
               Send this 4-sentence DM directly to founders or hiring leads on LinkedIn:
             </p>
 
-            <div className={`border rounded-xl p-4 text-xs font-mono whitespace-pre-wrap leading-relaxed ${
-              isDark ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+            <div className={`border-2 rounded-xl p-4 text-xs font-mono whitespace-pre-wrap leading-relaxed ${
+              isDark ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-300 text-slate-800 shadow-xs'
             }`}>
               {result.applicationBooster?.coldPitchMessage}
             </div>
           </div>
 
-          <div className={`mt-4 pt-3 border-t text-[11px] ${isDark ? 'border-slate-800 text-slate-500' : 'border-slate-100 text-slate-400'}`}>
+          <div className={`mt-4 pt-3 border-t text-[11px] font-medium ${isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
             💡 Pro-tip: Insert your GitHub or demo link in the bracketed area before hitting send.
           </div>
         </div>
@@ -803,10 +803,10 @@ export default function ResultsView({ result, onNewAudit, onApplyClick, theme })
       </div>
 
       {/* 10. BEEP APPLICATION ACTION CARD */}
-      <div className={`border rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-xl transition-all ${
+      <div className={`border-2 rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-xl transition-all ${
         isDark 
           ? 'bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-slate-900 border-purple-500/30' 
-          : 'bg-gradient-to-r from-purple-50 via-indigo-50 to-white border-purple-200'
+          : 'bg-gradient-to-r from-purple-50 via-indigo-50 to-white border-purple-300'
       }`}>
         <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-purple-600/10 text-purple-600 border border-purple-500/20">
           Ready to Fast-Track?
