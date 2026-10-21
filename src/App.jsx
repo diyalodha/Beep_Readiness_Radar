@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import AppHeader from './components/AppHeader';
 import DynamicHero from './components/DynamicHero';
 import RoadmapFocusedView from './components/RoadmapFocusedView';
@@ -12,10 +12,11 @@ import ResultsView from './components/ResultsView';
 import ApplicationModal from './components/ApplicationModal';
 import ApplicationTrackerModal from './components/ApplicationTrackerModal';
 import StatisticsModal from './components/StatisticsModal';
+import ResumePreviewModal from './components/ResumePreviewModal';
 import { INTERNSHIPS, SAMPLE_RESUMES } from './data/sampleRoles';
 import { extractResumeTextFromFile, ACCEPT_ATTR } from './utils/documentParser';
 import { runDynamicHeuristicAnalysis } from './utils/heuristicCore';
-import { AlertTriangle, Sparkles, ArrowRight, RefreshCw, FileText, UploadCloud, CheckCircle2, Trash2 } from 'lucide-react';
+import { AlertTriangle, Sparkles, ArrowRight, RefreshCw, FileText, UploadCloud, CheckCircle2, Trash2, Eye } from 'lucide-react';
 
 export default function App() {
   // Theme state: dark / light
@@ -95,18 +96,36 @@ export default function App() {
   // Resume State (Empty by default so user sees the dropzone)
   const [resumeText, setResumeText] = useState('');
   const [fileName, setFileName] = useState('');
+  const [fileUrl, setFileUrl] = useState(null);
+  const [fileType, setFileType] = useState('text'); // 'pdf' | 'docx' | 'text' | 'sample'
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const matcherFileInputRef = useRef(null);
   const [isMatcherParsing, setIsMatcherParsing] = useState(false);
 
   const handleMatcherFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (fileUrl) {
+      URL.revokeObjectURL(fileUrl);
+      setFileUrl(null);
+    }
     setIsMatcherParsing(true);
     setErrorMessage('');
     try {
-      const { text } = await extractResumeTextFromFile(file);
+      const { kind, text } = await extractResumeTextFromFile(file);
       setResumeText(text);
       setFileName(file.name);
+      if (kind === 'pdf') {
+        const url = URL.createObjectURL(file);
+        setFileUrl(url);
+        setFileType('pdf');
+      } else if (kind === 'docx') {
+        setFileUrl(null);
+        setFileType('docx');
+      } else {
+        setFileUrl(null);
+        setFileType('text');
+      }
     } catch (err) {
       setErrorMessage(err?.message || 'Could not parse resume file.');
     } finally {
@@ -116,8 +135,13 @@ export default function App() {
   };
 
   const handleQuickSampleSelect = (sample) => {
+    if (fileUrl) {
+      URL.revokeObjectURL(fileUrl);
+      setFileUrl(null);
+    }
     setResumeText(sample.content);
     setFileName(`${sample.label.replace(/\s+/g, '_')}.pdf`);
+    setFileType('sample');
     setErrorMessage('');
   };
 
@@ -156,19 +180,24 @@ export default function App() {
     localStorage.removeItem('beep_registered_students');
   };
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     setUser(null);
     setToken('');
     setApplications([]);
     setResult(null);
+    if (fileUrl) {
+      URL.revokeObjectURL(fileUrl);
+      setFileUrl(null);
+    }
     setResumeText('');
     setFileName('');
+    setFileType('text');
     setErrorMessage('');
     localStorage.removeItem('beep_user');
     localStorage.removeItem('beep_token');
     localStorage.removeItem('beep_applications');
     localStorage.removeItem('beep_registered_students');
-  };
+  }, [fileUrl]);
 
   // Sync applications from backend (strictly authorized by JWT token)
   useEffect(() => {
@@ -195,7 +224,7 @@ export default function App() {
       .catch(err => {
         console.warn('Could not fetch server applications:', err.message);
       });
-  }, [token]);
+  }, [token, handleLogout]);
 
   const handleApplicationSubmitted = (newApp) => {
     setApplications(prev => {
@@ -204,6 +233,15 @@ export default function App() {
       return updated;
     });
   };
+
+  // Clean up object URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (fileUrl) {
+        URL.revokeObjectURL(fileUrl);
+      }
+    };
+  }, [fileUrl]);
 
   // Check backend engine status on load
   useEffect(() => {
@@ -233,14 +271,24 @@ export default function App() {
   };
 
   const handleSelectSampleResume = (resumeObj) => {
+    if (fileUrl) {
+      URL.revokeObjectURL(fileUrl);
+      setFileUrl(null);
+    }
     setResumeText(resumeObj.content);
     setFileName(`${resumeObj.label.replace(/\s+/g, '_')}.pdf`);
+    setFileType('sample');
     setErrorMessage('');
   };
 
   const handleRemoveResume = () => {
+    if (fileUrl) {
+      URL.revokeObjectURL(fileUrl);
+      setFileUrl(null);
+    }
     setResumeText('');
     setFileName('');
+    setFileType('text');
     setResult(null);
     setErrorMessage('');
   };
@@ -448,30 +496,53 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              /* Attached Resume Status Card right on JD Matcher */
+              /* Attached Resume Status Card right on JD Matcher with Preview */
               <div className={`p-4 rounded-3xl border-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition-all ${
                 isDark ? 'bg-slate-900 border-purple-500/50 text-slate-200' : 'bg-white border-purple-300 text-slate-800 shadow-sm'
               }`}>
-                <div className="flex items-center gap-3">
+                <div 
+                  className="flex items-center gap-3 cursor-pointer group flex-1"
+                  onClick={() => setIsPreviewOpen(true)}
+                  title="Click to preview attached resume"
+                >
                   <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
                     <CheckCircle2 className="w-4 h-4" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className={`font-black text-xs ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                      <span className={`font-black text-xs group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors ${isDark ? 'text-white' : 'text-slate-950'}`}>
                         {fileName || 'Active_Resume.pdf'}
                       </span>
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                         {resumeText.trim().split(/\s+/).length} words
                       </span>
                     </div>
-                    <p className={`text-[11px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                      Ready for technical audit against {activeJobTitle}.
+                    <p className={`text-[11px] mt-0.5 flex items-center gap-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      <span>Ready for technical audit against {activeJobTitle}.</span>
+                      <span>•</span>
+                      <span className="text-purple-600 dark:text-purple-400 font-bold group-hover:underline flex items-center gap-1">
+                        <Eye className="w-3 h-3" /> Click to Preview
+                      </span>
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Dedicated Preview Button on JD Matcher */}
+                  <button
+                    type="button"
+                    onClick={() => setIsPreviewOpen(true)}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                      isDark 
+                        ? 'bg-purple-950/40 border-purple-500/40 text-purple-300 hover:bg-purple-900/40' 
+                        : 'bg-purple-50 border-purple-300 text-purple-800 hover:bg-purple-100 shadow-2xs'
+                    }`}
+                    title="Open resume document preview"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Preview</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => matcherFileInputRef.current?.click()}
@@ -566,6 +637,12 @@ export default function App() {
               setResumeText={setResumeText}
               fileName={fileName}
               setFileName={setFileName}
+              fileUrl={fileUrl}
+              setFileUrl={setFileUrl}
+              fileType={fileType}
+              setFileType={setFileType}
+              isPreviewOpen={isPreviewOpen}
+              setIsPreviewOpen={setIsPreviewOpen}
               onSelectSampleResume={handleSelectSampleResume}
               onRemoveResume={handleRemoveResume}
               isCustomJob={isCustomJob}
@@ -676,6 +753,24 @@ export default function App() {
         user={user}
         result={result}
         applications={applications}
+      />
+
+      {/* Shared Resume Document Preview Modal */}
+      <ResumePreviewModal
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        fileName={fileName}
+        resumeText={resumeText}
+        fileUrl={fileUrl}
+        fileType={fileType}
+        wordCount={resumeText ? resumeText.trim().split(/\s+/).length : 0}
+        onUploadDifferent={() => {
+          setIsPreviewOpen(false);
+          if (activeTab === 'matcher' && matcherFileInputRef.current) {
+            matcherFileInputRef.current.click();
+          }
+        }}
+        theme={theme}
       />
 
       {/* Clean Centered Footer with Strong Contrast */}
