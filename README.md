@@ -1,6 +1,22 @@
-# Beep Internship Readiness Radar
-> **Founder’s Office Discovery Platform for Beep (EventBeep)**  
-> *Closing the student "Actionability Gap" with transparent skills diagnostics, weekend proof-of-work project blueprints, and authenticated application tracking.*
+# Beep Readiness Radar
+
+**Live Demo:** https://beep-readiness-radar.onrender.com
+
+Beep Readiness Radar helps college students compare their resumes with internship job descriptions, identify skill gaps, and follow a structured 7-day preparation plan.
+
+## Features
+- Resume and job-description analysis
+- Direct, adjacent, and missing skill identification
+- Personalized project recommendations
+- Seven-day preparation plan
+- Application tracking
+
+## Technology Stack
+- React and Vite
+- Node.js and Express
+- SQLite
+
+**Current analysis engine:** Curated heuristic engine. Gemini API integration is currently disabled.
 
 ---
 
