@@ -28,13 +28,15 @@ if (!JWT_SECRET || JWT_SECRET.length < 32) {
 }
 
 // --- Security Headers via Helmet ---
-// Configured with Content Security Policy allowing necessary local development and blob previews
+// Configured with Content Security Policy allowing necessary local development, fonts, workers, and blob previews
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "blob:"],
+      workerSrc: ["'self'", "blob:"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
       imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
       connectSrc: ["'self'", 'https:', 'http://localhost:5000', 'http://localhost:5173', 'http://127.0.0.1:5173', 'https://generativelanguage.googleapis.com'],
       frameSrc: ["'self'", 'blob:'], // allows sandboxed PDF preview iframe
@@ -43,7 +45,8 @@ app.use(helmet({
       frameAncestors: ["'self'"]
     }
   },
-  crossOriginEmbedderPolicy: false
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
 // --- CORS: configurable via environment with local development defaults ---
@@ -559,12 +562,48 @@ Respond strictly with valid JSON without any markdown formatting or backticks:
 // --- Serve Production Client Bundle ---
 const distPath = path.resolve(__dirname, '../dist');
 if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
+  // 1. Serve hashed static assets with immutable cache; missing assets return 404 (NEVER index.html)
+  app.use('/assets', express.static(path.join(distPath, 'assets'), {
+    immutable: true,
+    maxAge: '1y',
+    fallthrough: false
+  }));
+
+  // 2. Serve static root files (favicon.svg, icons.svg, etc.)
+  app.use(express.static(distPath, {
+    index: false,
+    maxAge: '1h'
+  }));
+
+  // 3. SPA catch-all navigation: serve fresh index.html with no-cache headers
   app.use((req, res, next) => {
     if (req.method === 'GET' && !req.path.startsWith('/api')) {
+      // If the request targets a file with an extension, return 404 rather than corrupting scripts with HTML
+      if (path.extname(req.path)) {
+        return res.status(404).json({ error: 'Asset not found', path: req.path });
+      }
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       return res.sendFile(path.join(distPath, 'index.html'));
     }
     next();
+  });
+} else {
+  // Graceful fallback if production bundle has not been compiled yet
+  app.get('/', (req, res) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`
+      <!doctype html>
+      <html>
+        <head><title>Beep Readiness Radar - Build Required</title></head>
+        <body style="font-family: system-ui, sans-serif; background: #020617; color: #f8fafc; padding: 40px; text-align: center;">
+          <h1 style="color: #c084fc;">Beep Readiness Radar Backend Active</h1>
+          <p style="color: #94a3b8;">The client production bundle is not yet built. Run <code style="background: #1e293b; color: #38bdf8; padding: 4px 8px; border-radius: 6px;">npm run build</code> to compile assets.</p>
+          <p style="color: #94a3b8;">For local live-reload development, visit <a href="http://localhost:5173" style="color: #818cf8;">http://localhost:5173</a>.</p>
+        </body>
+      </html>
+    `);
   });
 }
 

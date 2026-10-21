@@ -92,12 +92,39 @@ GEMINI_API_KEY=
 ```
 
 ### 4. Start the Application
-Run both backend and frontend concurrently:
+
+#### Option A: Unified Production Mode (Single Port 5000)
+Build the frontend and run the production server serving both UI and API from a single endpoint:
+```bash
+npm run build
+npm start
+```
+* **Unified Web App & API:** [http://localhost:5000](http://localhost:5000)
+
+#### Option B: Local Development Mode (Hot Reload)
+Run both backend API and Vite dev server concurrently:
 ```bash
 npm run dev
 ```
-* **Frontend Web App:** [http://localhost:5173](http://localhost:5173)
+* **Frontend Web App (Hot Reload):** [http://localhost:5173](http://localhost:5173)
 * **Backend API:** [http://localhost:5000](http://localhost:5000)
+
+---
+
+## 🌐 1-Click Deployment Guide (Render / Railway)
+
+### Deploying to Render.com (Recommended Free Tier)
+1. **Push your code to GitHub** (already configured on your repo).
+2. Go to [render.com](https://render.com) and click **New +** → **Web Service**.
+3. Connect your repository: `https://github.com/diyalodha/Beep_Readiness_Radar`.
+4. Configure the settings:
+   - **Environment:** `Node`
+   - **Build Command:** `npm install && npm run build`
+   - **Start Command:** `npm start`
+5. Under **Environment Variables**, add:
+   - `JWT_SECRET`: (Generate any random 32+ character string, e.g. `a6e87f2b934c1d0e5f7a2b4c6e8f0a2d3e5f7a9b1c2d3e4f5a6b7c8d9e0f1a2b`)
+   - `GEMINI_API_KEY`: *(Optional)* Your Google Gemini API Key for live AI evaluations.
+6. Click **Deploy Web Service**. Render provides a public HTTPS URL (e.g. `https://beep-readiness-radar.onrender.com`) that automatically runs both the client and backend on the single deployed URL with persistent SQLite!
 
 ---
 
