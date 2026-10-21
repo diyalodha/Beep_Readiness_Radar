@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AppHeader from './components/AppHeader';
 import DynamicHero from './components/DynamicHero';
 import RoadmapFocusedView from './components/RoadmapFocusedView';
@@ -12,9 +12,10 @@ import ResultsView from './components/ResultsView';
 import ApplicationModal from './components/ApplicationModal';
 import ApplicationTrackerModal from './components/ApplicationTrackerModal';
 import StatisticsModal from './components/StatisticsModal';
-import { INTERNSHIPS } from './data/sampleRoles';
+import { INTERNSHIPS, SAMPLE_RESUMES } from './data/sampleRoles';
+import { extractResumeTextFromFile, ACCEPT_ATTR } from './utils/documentParser';
 import { runDynamicHeuristicAnalysis } from './utils/heuristicCore';
-import { AlertTriangle, Sparkles, ArrowRight, RefreshCw, FileText } from 'lucide-react';
+import { AlertTriangle, Sparkles, ArrowRight, RefreshCw, FileText, UploadCloud, CheckCircle2, Trash2 } from 'lucide-react';
 
 export default function App() {
   // Theme state: dark / light
@@ -94,6 +95,31 @@ export default function App() {
   // Resume State (Empty by default so user sees the dropzone)
   const [resumeText, setResumeText] = useState('');
   const [fileName, setFileName] = useState('');
+  const matcherFileInputRef = useRef(null);
+  const [isMatcherParsing, setIsMatcherParsing] = useState(false);
+
+  const handleMatcherFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsMatcherParsing(true);
+    setErrorMessage('');
+    try {
+      const { text } = await extractResumeTextFromFile(file);
+      setResumeText(text);
+      setFileName(file.name);
+    } catch (err) {
+      setErrorMessage(err?.message || 'Could not parse resume file.');
+    } finally {
+      setIsMatcherParsing(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleQuickSampleSelect = (sample) => {
+    setResumeText(sample.content);
+    setFileName(`${sample.label.replace(/\s+/g, '_')}.pdf`);
+    setErrorMessage('');
+  };
 
   // Analysis & Execution State
   const [isLoading, setIsLoading] = useState(false);
@@ -356,21 +382,117 @@ export default function App() {
               theme={theme}
             />
 
-            {/* Quick Resume Reminder if not attached */}
-            {!resumeText && (
-              <div className={`p-4 rounded-3xl border-2 flex items-center justify-between text-xs transition-all ${
-                isDark ? 'bg-slate-900/90 border-slate-700 text-slate-200' : 'bg-white border-slate-300 text-slate-800 shadow-xs'
+            {/* Hidden In-Place File Picker for JD Matcher */}
+            <input
+              ref={matcherFileInputRef}
+              type="file"
+              accept={ACCEPT_ATTR}
+              className="hidden"
+              onChange={handleMatcherFileSelect}
+            />
+
+            {/* In-Place Resume Attachment Zone right on JD Matcher */}
+            {!resumeText ? (
+              <div className={`p-5 rounded-3xl border-2 transition-all shadow-xs ${
+                isDark ? 'bg-slate-900/90 border-purple-500/40 text-slate-200' : 'bg-white border-purple-200 text-slate-800 shadow-sm'
               }`}>
-                <div className="flex items-center gap-2.5">
-                  <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                  <span className="font-semibold">No resume attached yet. Attach your resume to evaluate readiness.</span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2.5 rounded-xl bg-purple-600/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 shrink-0 mt-0.5">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className={`text-sm font-black ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                        Attach Candidate Resume for Technical Audit
+                      </h3>
+                      <p className={`text-xs mt-0.5 font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                        Attach your PDF/DOCX file directly without leaving this page, or pick a sample candidate.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Direct File Picker Trigger (In-Place!) */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => matcherFileInputRef.current?.click()}
+                      disabled={isMatcherParsing}
+                      className="px-4 py-2.5 rounded-xl font-bold text-xs bg-purple-600 hover:bg-purple-500 text-white shadow-md shadow-purple-600/30 transition cursor-pointer flex items-center gap-1.5"
+                    >
+                      {isMatcherParsing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+                      <span>{isMatcherParsing ? 'Parsing Resume...' : 'Attach Resume File'}</span>
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => setActiveTab('resume')}
-                  className="px-3.5 py-1.5 rounded-xl font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-xs transition cursor-pointer"
-                >
-                  Attach Resume
-                </button>
+
+                {/* 1-Click Sample Resumes right on JD Matcher */}
+                <div className="mt-4 pt-3.5 border-t border-inherit/30 flex flex-wrap items-center gap-2 text-xs">
+                  <span className={`text-[11px] font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Or test instantly with:
+                  </span>
+                  {SAMPLE_RESUMES.map(sample => (
+                    <button
+                      key={sample.id}
+                      type="button"
+                      onClick={() => handleQuickSampleSelect(sample)}
+                      className={`px-3 py-1.5 rounded-xl font-bold text-xs border transition cursor-pointer flex items-center gap-1.5 ${
+                        isDark 
+                          ? 'bg-slate-950 border-slate-800 text-slate-300 hover:border-purple-500 hover:text-white' 
+                          : 'bg-slate-50 border-slate-300 text-slate-700 hover:border-purple-500 hover:bg-purple-50/50'
+                      }`}
+                      title={sample.summary}
+                    >
+                      <span>{sample.label.split(' ')[0]} ({sample.tag})</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* Attached Resume Status Card right on JD Matcher */
+              <div className={`p-4 rounded-3xl border-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition-all ${
+                isDark ? 'bg-slate-900 border-purple-500/50 text-slate-200' : 'bg-white border-purple-300 text-slate-800 shadow-sm'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className={`font-black text-xs ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                        {fileName || 'Active_Resume.pdf'}
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        {resumeText.trim().split(/\s+/).length} words
+                      </span>
+                    </div>
+                    <p className={`text-[11px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Ready for technical audit against {activeJobTitle}.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => matcherFileInputRef.current?.click()}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition cursor-pointer ${
+                      isDark ? 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-300 hover:bg-slate-100 text-slate-700'
+                    }`}
+                  >
+                    Change File
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleRemoveResume}
+                    className={`p-1.5 rounded-xl border text-slate-400 hover:text-rose-500 transition cursor-pointer ${
+                      isDark ? 'border-slate-800 bg-slate-950' : 'border-slate-300 bg-slate-50'
+                    }`}
+                    title="Remove resume"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             )}
 
@@ -385,18 +507,20 @@ export default function App() {
                   Evaluate Technical Readiness for {activeJobTitle}
                 </h3>
                 <p className={`text-xs mt-1 font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                  {resumeText ? `Using attached file: ${fileName || 'Active resume'}` : 'Click below or switch to the Resume tab to attach your profile.'}
+                  {resumeText ? `Using attached file: ${fileName || 'Active resume'}` : 'Attach your resume above to evaluate technical readiness.'}
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={handleAnalyze}
-                disabled={isLoading || !resumeText.trim()}
-                className={`px-8 py-3.5 rounded-2xl font-black text-xs sm:text-sm shadow-xl transition-all ${
-                  isLoading || !resumeText.trim()
-                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-500 cursor-not-allowed border-2 border-slate-300 dark:border-slate-700'
-                    : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-500 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-600/30 hover:shadow-purple-600/50 cursor-pointer transform hover:-translate-y-0.5'
+                onClick={resumeText.trim() ? handleAnalyze : () => matcherFileInputRef.current?.click()}
+                disabled={isLoading}
+                className={`px-8 py-3.5 rounded-2xl font-black text-xs sm:text-sm shadow-xl transition-all cursor-pointer ${
+                  isLoading
+                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 cursor-not-allowed border-2 border-slate-300 dark:border-slate-700'
+                    : resumeText.trim()
+                      ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-500 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-600/30 hover:shadow-purple-600/50 transform hover:-translate-y-0.5'
+                      : 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/30'
                 }`}
               >
                 {isLoading ? (
@@ -405,8 +529,8 @@ export default function App() {
                     <span>Auditing {fileName || 'Resume'} against {activeJobTitle}...</span>
                   </span>
                 ) : !resumeText.trim() ? (
-                  <span className="flex items-center gap-2" onClick={() => setActiveTab('resume')}>
-                    <FileText className="w-4 h-4" />
+                  <span className="flex items-center gap-2">
+                    <UploadCloud className="w-4 h-4" />
                     <span>Attach Resume to Enable Audit</span>
                   </span>
                 ) : (

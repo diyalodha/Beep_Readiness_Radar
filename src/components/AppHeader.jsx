@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Menu, X, Sun, Moon, LogOut, Target, FileText, 
   Zap, HelpCircle, MessageSquare, Briefcase, BarChart3,
-  CheckCircle2, ChevronDown
+  CheckCircle2
 } from 'lucide-react';
 
 export default function AppHeader({
@@ -33,42 +33,36 @@ export default function AppHeader({
     {
       id: 'matcher',
       label: 'JD Matcher',
-      shortLabel: 'Matcher',
       icon: Target,
       desc: 'Select or paste an internship to audit alignment'
     },
     {
       id: 'resume',
       label: 'Resume Parser',
-      shortLabel: 'Resume',
       icon: FileText,
       desc: 'PDF/DOCX client-side parsing & native preview'
     },
     {
       id: 'roadmap',
       label: '48h Roadmap',
-      shortLabel: '48h Project',
       icon: Zap,
       desc: 'Weekend proof project, Google XYZ & README'
     },
     {
       id: 'interview',
       label: 'Interview Prep',
-      shortLabel: 'Interview',
       icon: MessageSquare,
       desc: 'Screening questions, STAR answers & cold outreach'
     },
     {
       id: 'quiz',
       label: 'Tech Quiz',
-      shortLabel: 'Quiz',
       icon: HelpCircle,
       desc: '5-question adaptive CS & system assessment'
     },
     {
       id: 'applications',
       label: 'Applications',
-      shortLabel: 'Jobs',
       icon: Briefcase,
       desc: 'SQLite persistent tracking & submission slips',
       badge: applicationsCount > 0 ? String(applicationsCount) : null
@@ -76,7 +70,6 @@ export default function AppHeader({
     {
       id: 'analytics',
       label: 'Placement Stats',
-      shortLabel: 'Stats',
       icon: BarChart3,
       desc: 'Readiness metrics & illustrative 2026 guidelines'
     }
@@ -98,8 +91,31 @@ export default function AppHeader({
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-3">
           
-          {/* Left: Brand Logo & Name + 3-Lines Features Button */}
+          {/* Left: 3-Lines Icon Button (Extreme Left) + Brand Logo & Name */}
           <div className="flex items-center gap-3 shrink-0">
+            
+            {/* Just the 3-Lines Icon Button (Extreme Left, no text) */}
+            <button
+              onClick={() => setIsMenuOpen(prev => !prev)}
+              className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                isMenuOpen
+                  ? (isDark 
+                      ? 'bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-600/30' 
+                      : 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-600/30')
+                  : (isDark 
+                      ? 'bg-slate-900 border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white' 
+                      : 'bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200 shadow-2xs')
+              }`}
+              title="All Features Navigation"
+              aria-label="Features menu"
+            >
+              {isMenuOpen ? (
+                <X className="w-5 h-5 text-white" />
+              ) : (
+                <Menu className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              )}
+            </button>
+
             {/* Brand Logo & Name */}
             <div 
               className="flex items-center gap-2.5 cursor-pointer select-none" 
@@ -129,28 +145,9 @@ export default function AppHeader({
               </div>
             </div>
 
-            {/* 3-Lines Features Menu Trigger Button */}
-            <button
-              onClick={() => setIsMenuOpen(prev => !prev)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                isMenuOpen
-                  ? (isDark 
-                      ? 'bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-600/30' 
-                      : 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-600/30')
-                  : (isDark 
-                      ? 'bg-slate-900 border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white' 
-                      : 'bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200 shadow-2xs')
-              }`}
-              title="Open full features navigation menu"
-              aria-label="Features menu"
-            >
-              {isMenuOpen ? <X className="w-4 h-4 text-white" /> : <Menu className="w-4 h-4 text-purple-500 dark:text-purple-400" />}
-              <span className="hidden sm:inline">Features</span>
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 hidden sm:inline ${isMenuOpen ? 'rotate-180' : ''}`} />
-            </button>
           </div>
 
-          {/* Center: Desktop Feature Pills */}
+          {/* Center: Desktop Navigation with full names: JD Matcher, Resume Parser, etc. */}
           <nav className="hidden lg:flex items-center gap-1 overflow-x-auto py-1">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -160,7 +157,7 @@ export default function AppHeader({
                 <button
                   key={item.id}
                   onClick={() => handleSelectTab(item.id)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                     isActive
                       ? (isDark 
                           ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30 border border-purple-500' 
@@ -171,7 +168,7 @@ export default function AppHeader({
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  <span>{item.shortLabel}</span>
+                  <span>{item.label}</span>
                   {item.badge && (
                     <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
                       isActive ? 'bg-white text-purple-700 font-extrabold' : 'bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-purple-300 font-extrabold'

@@ -7,6 +7,143 @@ import {
   ArrowRight, ExternalLink, ShieldCheck
 } from 'lucide-react';
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function buildResumeHtml(fileName, resumeText) {
+  if (!resumeText) return '';
+  const lines = resumeText.split(/\r?\n/);
+  
+  let name = '';
+  let contactLine = '';
+  const bodyLines = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (!trimmed) continue;
+    if (!name) {
+      name = trimmed;
+    } else if (!contactLine && (trimmed.toLowerCase().includes('email') || trimmed.toLowerCase().includes('phone') || trimmed.toLowerCase().includes('@') || trimmed.toLowerCase().includes('github') || trimmed.toLowerCase().includes('linkedin'))) {
+      contactLine = trimmed;
+    } else {
+      bodyLines.push(trimmed);
+    }
+  }
+
+  const formattedSections = [];
+  let currentSection = { title: '', items: [] };
+
+  for (const line of bodyLines) {
+    const isSectionHeader = /^[A-Z\s&/]{3,35}:?$/.test(line) || 
+      /^(TECHNICAL SKILLS|CORE COMPETENCIES|SKILLS|PROJECTS|KEY PROJECTS|ACADEMIC PROJECTS|PROFESSIONAL PROJECTS|EDUCATION|EXPERIENCE|ACHIEVEMENTS|LEADERSHIP|COLLEGE INVOLVEMENT|CERTIFICATIONS):?$/i.test(line);
+
+    if (isSectionHeader) {
+      if (currentSection.title || currentSection.items.length) {
+        formattedSections.push(currentSection);
+      }
+      currentSection = { title: line.replace(/:$/, ''), items: [] };
+    } else {
+      currentSection.items.push(line);
+    }
+  }
+  if (currentSection.title || currentSection.items.length) {
+    formattedSections.push(currentSection);
+  }
+
+  const sectionsHtml = formattedSections.map(sec => `
+    <div style="margin-top: 18px;">
+      ${sec.title ? `<div style="font-size: 13px; font-weight: 800; letter-spacing: 0.05em; color: #1e1b4b; border-bottom: 2px solid #cbd5e1; padding-bottom: 4px; margin-bottom: 8px; text-transform: uppercase;">${escapeHtml(sec.title)}</div>` : ''}
+      <div style="font-size: 12px; line-height: 1.6; color: #1e293b;">
+        ${sec.items.map(it => {
+          if (it.startsWith('- ') || it.startsWith('• ')) {
+            return `<div style="margin-left: 14px; text-indent: -12px; margin-bottom: 4px;">• ${escapeHtml(it.replace(/^[-•]\s*/, ''))}</div>`;
+          }
+          if (/^\d+\.\s/.test(it)) {
+            return `<div style="font-weight: 700; color: #0f172a; margin-top: 8px; margin-bottom: 2px;">${escapeHtml(it)}</div>`;
+          }
+          return `<div style="margin-bottom: 4px;">${escapeHtml(it)}</div>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <style>
+          * { box-sizing: border-box; }
+          body {
+            margin: 0;
+            padding: 24px;
+            background: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #0f172a;
+            display: flex;
+            justify-content: center;
+          }
+          .page {
+            max-width: 820px;
+            width: 100%;
+            background: #ffffff;
+            padding: 24px 32px;
+          }
+          .header {
+            text-align: center;
+            border-bottom: 2px solid #4338ca;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+          }
+          .name {
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            color: #0f172a;
+            text-transform: uppercase;
+            margin: 0;
+          }
+          .contact {
+            font-size: 11.5px;
+            color: #475569;
+            margin-top: 6px;
+            font-weight: 500;
+          }
+          .badge {
+            display: inline-block;
+            background: #eef2ff;
+            color: #4338ca;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            margin-top: 6px;
+            border: 1px solid #c7d2fe;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="page">
+          <div class="header">
+            <h1 class="name">${escapeHtml(name || fileName || 'Candidate Resume')}</h1>
+            ${contactLine ? `<div class="contact">${escapeHtml(contactLine)}</div>` : ''}
+            <span class="badge">EventBeep Candidate Profile</span>
+          </div>
+          ${sectionsHtml}
+        </div>
+      </body>
+    </html>
+  `;
+}
+
 export default function ResumeUploader({
   resumeText,
   setResumeText,
@@ -43,7 +180,6 @@ export default function ResumeUploader({
   const handleFileProcess = async (file) => {
     if (!file) return;
 
-    // Reset prior state before parsing the new file.
     if (fileUrl) {
       URL.revokeObjectURL(fileUrl);
       setFileUrl(null);
@@ -59,7 +195,6 @@ export default function ResumeUploader({
       setResumeText(text);
 
       if (kind === 'pdf') {
-        // Native object URL so the user can visually inspect the exact PDF.
         const url = URL.createObjectURL(file);
         setFileUrl(url);
         setFileType('pdf');
@@ -191,7 +326,7 @@ export default function ResumeUploader({
         </div>
       )}
 
-      {/* Visible parse error banner (never silent) */}
+      {/* Visible parse error banner */}
       {parseError && (
         <div className={`mb-4 p-3.5 rounded-2xl border flex items-start gap-2.5 text-xs ${
           isDark
@@ -243,10 +378,10 @@ export default function ResumeUploader({
                 <p className={`text-xs mt-0.5 flex items-center gap-2 ${
                   isDark ? 'text-slate-400' : 'text-slate-500'
                 }`}>
-                  <span>{fileType === 'pdf' ? 'Native PDF Document' : (fileType === 'docx' ? 'Word Document (parsed with Mammoth)' : `${wordCount} words`)}</span>
+                  <span>{fileType === 'pdf' ? 'Native PDF Document' : (fileType === 'docx' ? 'Word Document' : `${wordCount} words`)}</span>
                   <span>•</span>
                   <span className="text-purple-600 dark:text-purple-400 font-semibold group-hover:underline flex items-center gap-1">
-                    <Eye className="w-3.5 h-3.5" /> Click to view exact file
+                    <Eye className="w-3.5 h-3.5" /> Click to view preview
                   </span>
                 </p>
               </div>
@@ -299,13 +434,13 @@ export default function ResumeUploader({
           <div className={`mt-3 flex items-start gap-2 text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
             <ShieldCheck className="w-3.5 h-3.5 mt-0.5 shrink-0 text-purple-500" />
             <p>
-              <span className="font-semibold">Privacy:</span> Your resume text is sent to our analysis engine to compute your readiness score. It is not stored on our servers after analysis.
+              <span className="font-semibold">Privacy:</span> Your resume text is parsed in-browser to evaluate skill alignment. It is never stored on our servers after analysis.
             </p>
           </div>
 
         </div>
       ) : (
-        /* STATE B: NO RESUME ATTACHED YET (CLEAN DROPZONE) */
+        /* STATE B: NO RESUME ATTACHED YET */
         <div className="space-y-4">
           
           {/* Drag & Drop File Dropzone */}
@@ -340,12 +475,12 @@ export default function ResumeUploader({
             </div>
           </div>
 
-          {/* Fallback Option: 1-Click Sample Resumes */}
+          {/* Fallback Option: 1-Click Sample Resumes with High-Contrast Clear Styling */}
           <div className={`p-5 rounded-3xl border-2 transition-colors ${
-            isDark ? 'bg-slate-900/70 border-slate-800' : 'bg-white border-slate-300 shadow-xs'
+            isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-300 shadow-xs'
           }`}>
             <span className={`text-xs font-extrabold uppercase tracking-wider block mb-3 ${
-              isDark ? 'text-slate-300' : 'text-slate-900'
+              isDark ? 'text-slate-200' : 'text-slate-950'
             }`}>
               Or test with sample student profiles:
             </span>
@@ -358,8 +493,8 @@ export default function ResumeUploader({
                   onClick={() => handleSampleSelect(res)}
                   className={`text-left p-3.5 rounded-2xl border transition-all cursor-pointer ${
                     isDark 
-                      ? 'bg-slate-950 border-slate-800 hover:border-purple-500 text-slate-200 hover:bg-slate-900' 
-                      : 'bg-slate-50 border-slate-300 hover:border-purple-500 text-slate-800 hover:bg-purple-50/40 shadow-2xs hover:shadow-xs'
+                      ? 'bg-slate-950 border-slate-800 hover:border-purple-500 text-slate-200 hover:bg-slate-900/90' 
+                      : 'bg-slate-50 border-slate-300 hover:border-purple-500 text-slate-800 hover:bg-purple-50/40 shadow-xs hover:shadow-sm'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
@@ -369,7 +504,7 @@ export default function ResumeUploader({
                     <ArrowRight className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                   </div>
                   <h4 className={`text-xs font-extrabold ${isDark ? 'text-white' : 'text-slate-950'}`}>{res.label}</h4>
-                  <p className={`text-[11px] mt-1 font-medium leading-snug ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{res.summary}</p>
+                  <p className={`text-[11px] mt-1 font-semibold leading-snug ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{res.summary}</p>
                 </button>
               ))}
             </div>
@@ -384,24 +519,21 @@ export default function ResumeUploader({
               <p>
                 <span className="font-bold text-slate-200 dark:text-slate-200">Resume Privacy Guarantee:</span> Your resume text is parsed in-memory strictly to evaluate skill alignment against this job description. The server does not log, persist, or retain resume contents in any database.
               </p>
-              <p className="text-[10px] opacity-80">
-                When Gemini AI is active, text is sent securely over TLS for one-time inference. Resumes are cleared from application memory immediately upon clicking Remove or logging out.
-              </p>
             </div>
           </div>
 
         </div>
       )}
 
-      {/* MODAL: EXACT FILE PREVIEW VIEWER (HIGH FIDELITY) */}
+      {/* MODAL: EXACT FILE PREVIEW VIEWER (HIGH FIDELITY, CLEAN UNIFORM VIEW) */}
       {isPreviewOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5">
           <div className={`max-w-4xl w-full rounded-3xl p-5 sm:p-6 border shadow-2xl relative flex flex-col h-[88vh] ${
-            isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+            isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900'
           }`}>
             
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-inherit/40">
               <div className="flex items-center gap-3">
                 <div className={`p-2.5 rounded-xl font-bold text-xs ${
                   fileType === 'pdf' ? 'bg-rose-500/10 text-rose-500' : 'bg-purple-600/10 text-purple-600 dark:text-purple-400'
@@ -414,11 +546,11 @@ export default function ResumeUploader({
                       {fileName || 'Uploaded_Resume.pdf'}
                     </h3>
                     <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                      Exact File Preview
+                      Document Preview
                     </span>
                   </div>
                   <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {fileType === 'pdf' ? 'Original PDF layout rendered directly' : `${wordCount} words detected`}
+                    {fileType === 'pdf' ? 'Native PDF Document' : `${wordCount} words detected • Formatted Document View`}
                   </p>
                 </div>
               </div>
@@ -429,7 +561,7 @@ export default function ResumeUploader({
                     type="button"
                     onClick={() => window.open(fileUrl, '_blank')}
                     className={`text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1 font-semibold transition ${
-                      isDark ? 'border-slate-800 hover:bg-slate-800 text-slate-300' : 'border-slate-200 hover:bg-slate-100 text-slate-700'
+                      isDark ? 'border-slate-800 hover:bg-slate-800 text-slate-300' : 'border-slate-300 hover:bg-slate-100 text-slate-700'
                     }`}
                     title="Open PDF in new browser tab"
                   >
@@ -440,8 +572,8 @@ export default function ResumeUploader({
 
                 <button
                   onClick={() => setIsPreviewOpen(false)}
-                  className={`p-1.5 rounded-full border transition ${
-                    isDark ? 'border-slate-800 text-slate-400 hover:text-white' : 'border-slate-200 text-slate-500 hover:text-slate-800'
+                  className={`p-1.5 rounded-full border transition cursor-pointer ${
+                    isDark ? 'border-slate-800 text-slate-400 hover:text-white' : 'border-slate-300 text-slate-500 hover:text-slate-800'
                   }`}
                 >
                   <X className="w-4 h-4" />
@@ -449,8 +581,8 @@ export default function ResumeUploader({
               </div>
             </div>
 
-            {/* Resume Content View: High-Fidelity Rendering */}
-            <div className="flex-1 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 relative bg-slate-950 flex flex-col">
+            {/* Resume Content View: High-Fidelity Rendering - Zero Black Bands */}
+            <div className="flex-1 overflow-hidden rounded-2xl border border-slate-300 dark:border-slate-700 relative bg-white flex flex-col">
               
               {fileType === 'pdf' && fileUrl ? (
                 /* 1. EXACT NATIVE PDF DOCUMENT VIEWER */
@@ -460,41 +592,26 @@ export default function ResumeUploader({
                   title="Exact Uploaded Resume PDF"
                 />
               ) : (
-                /* 2. FORMATTED A4 DOCUMENT VIEWER (For Text & Sample Resumes) */
-                <div className="w-full h-full overflow-y-auto bg-slate-100 dark:bg-slate-950 p-4 sm:p-8 flex justify-center">
-                  <div className="max-w-2xl w-full bg-white text-slate-900 p-8 sm:p-10 rounded-xl shadow-2xl border border-slate-200 font-sans text-xs leading-relaxed space-y-4">
-                    
-                    {/* Stylized Document Header */}
-                    <div className="border-b border-slate-300 pb-4 text-center">
-                      <h2 className="text-xl font-black tracking-tight text-slate-900 uppercase">
-                        {fileName ? fileName.replace(/\.[^/.]+$/, '').replace(/_/g, ' ') : 'Candidate Resume'}
-                      </h2>
-                      <p className="text-[11px] text-slate-500 mt-1">
-                        Verified Student Candidate • Beep Platform Document
-                      </p>
-                    </div>
-
-                    {/* Document Body */}
-                    <div className="whitespace-pre-wrap font-sans text-xs text-slate-800 leading-relaxed space-y-2">
-                      {resumeText}
-                    </div>
-
-                  </div>
-                </div>
+                /* 2. HIGH-FIDELITY FORMATTED DOCUMENT VIEWER (For Sample & Text Resumes) */
+                <iframe
+                  srcDoc={buildResumeHtml(fileName, resumeText)}
+                  className="w-full h-full border-0 bg-white"
+                  title="Candidate Resume Document"
+                />
               )}
 
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-between pt-3.5 mt-2.5 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between pt-3.5 mt-2.5 border-t border-inherit/40">
               <button
                 type="button"
                 onClick={() => {
                   setIsPreviewOpen(false);
                   fileInputRef.current?.click();
                 }}
-                className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border ${
-                  isDark ? 'border-slate-800 hover:border-slate-700 text-slate-300' : 'border-slate-200 hover:bg-slate-100 text-slate-700'
+                className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border cursor-pointer ${
+                  isDark ? 'border-slate-800 hover:border-slate-700 text-slate-300' : 'border-slate-300 hover:bg-slate-100 text-slate-700'
                 }`}
               >
                 <RefreshCw className="w-3.5 h-3.5 text-purple-500" />
@@ -504,9 +621,9 @@ export default function ResumeUploader({
               <button
                 type="button"
                 onClick={() => setIsPreviewOpen(false)}
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white transition shadow-sm"
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white transition shadow-sm cursor-pointer"
               >
-                Done • Return to Audit
+                Done • Return to Workspace
               </button>
             </div>
 
