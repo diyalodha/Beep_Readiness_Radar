@@ -106,8 +106,8 @@ Run both backend API and Vite dev server concurrently:
 ```bash
 npm run dev
 ```
-* **Frontend Web App (Hot Reload):** [http://localhost:5173](http://localhost:5173)
-* **Backend API:** [http://localhost:5000](http://localhost:5000)
+* **Frontend Web App (Hot Reload):** [http://localhost:5000](http://localhost:5000)
+* **Backend API:** [http://localhost:5000/api/status](http://localhost:5000/api/status)
 
 ---
 
