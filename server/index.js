@@ -1,3 +1,4 @@
+import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -555,6 +556,16 @@ Respond strictly with valid JSON without any markdown formatting or backticks:
     return res.json(fallbackResult);
   }
 });
+
+// --- Serve Production Client Bundle ---
+const distPath = path.resolve(__dirname, '../dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 
 export { runDynamicHeuristicAnalysis };
 
