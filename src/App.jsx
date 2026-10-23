@@ -673,6 +673,11 @@ export default function App() {
           <RoadmapFocusedView
             result={result}
             selectedInternship={selectedInternship}
+            resumeText={resumeText}
+            fileName={fileName}
+            isCustomJob={isCustomJob}
+            customRoleTitle={customRoleTitle}
+            customJd={customJd}
             onNavigate={(tab) => setActiveTab(tab)}
             theme={theme}
           />
@@ -683,6 +688,11 @@ export default function App() {
           <InterviewFocusedView
             result={result}
             selectedInternship={selectedInternship}
+            resumeText={resumeText}
+            fileName={fileName}
+            isCustomJob={isCustomJob}
+            customRoleTitle={customRoleTitle}
+            customJd={customJd}
             user={user}
             onNavigate={(tab) => setActiveTab(tab)}
             theme={theme}
