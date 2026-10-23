@@ -620,6 +620,7 @@ export default function App() {
                 result={result}
                 theme={theme}
                 onApplyClick={() => setIsApplyModalOpen(true)}
+                onTakeQuiz={() => setActiveTab('quiz')}
                 onNewAudit={() => {
                   setResult(null);
                   window.scrollTo({ top: 350, behavior: 'smooth' });
@@ -692,6 +693,10 @@ export default function App() {
         {activeTab === 'quiz' && (
           <AdaptiveQuizView
             theme={theme}
+            targetRole={isCustomJob ? (customRoleTitle || 'Software Engineer') : (selectedInternship?.role || 'Frontend Developer')}
+            customJd={isCustomJob ? customJd : (selectedInternship?.description || (selectedInternship?.requirements ? selectedInternship.requirements.join(' ') : ''))}
+            detectedGaps={result?.criticalSkillGaps?.map(g => g.skillOrCompetency) || []}
+            token={token}
             onCompleteQuiz={(quizScore) => {
               console.log('Quiz completed with score:', quizScore);
             }}

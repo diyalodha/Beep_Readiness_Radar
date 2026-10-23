@@ -10,6 +10,10 @@ import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { userQueries, applicationQueries } from './db.js';
+import { getGeminiConfig, isGeminiConfigured } from './services/geminiService.js';
+import { analyzeResumeWithGemini } from './services/semanticAnalysisService.js';
+import { validateInputPayload } from './services/analysisValidator.js';
+import { generateExpertQuiz, gradeQuizSession } from './services/quizService.js';
 import { runDynamicHeuristicAnalysis } from '../src/utils/heuristicCore.js';
 
 dotenv.config();
@@ -18,7 +22,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 
 // --- Security: Ensure strong JWT_SECRET (Zero-Crash Fallback) ---
@@ -29,28 +32,31 @@ if (!JWT_SECRET || JWT_SECRET.length < 32) {
 }
 
 // --- Security Headers via Helmet ---
-// Configured with Content Security Policy allowing necessary local development, fonts, workers, and blob previews
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "blob:"],
-      workerSrc: ["'self'", "blob:"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
-      connectSrc: ["'self'", 'https:', 'http://localhost:5000', 'http://localhost:5173', 'http://127.0.0.1:5173', 'https://generativelanguage.googleapis.com'],
-      frameSrc: ["'self'", 'blob:'], // allows sandboxed PDF preview iframe
+      connectSrc: [
+        "'self'", 
+        'https:', 
+        'http://localhost:5000', 
+        'http://localhost:5173', 
+        'http://127.0.0.1:5173', 
+        'https://generativelanguage.googleapis.com'
+      ],
+      frameSrc: ["'self'", 'blob:', 'data:'],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       frameAncestors: ["'self'"]
     }
   },
-  crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginEmbedderPolicy: false
 }));
 
-// --- CORS: configurable via environment with local development defaults ---
+// --- CORS Configuration ---
 const defaultOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
 const configuredOrigins = process.env.ALLOWED_ORIGINS 
   ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean)
@@ -62,12 +68,11 @@ app.use(cors({
     if (!origin || ALLOWED_ORIGINS.has(origin) || ALLOWED_ORIGINS.has('*') || process.env.NODE_ENV !== 'production') {
       return callback(null, true);
     }
-    // Allow any standard cloud platform subdomains (Render, Vercel, Railway, etc.)
     if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
         /\.(onrender\.com|vercel\.app|railway\.app|fly\.dev)$/.test(origin)) {
       return callback(null, true);
     }
-    return callback(null, true); // Safe fallback: don't crash or block deployment
+    return callback(null, true);
   },
   credentials: true,
 }));
@@ -77,15 +82,23 @@ app.use(express.json({ limit: '4mb' }));
 // --- Rate Limiters ---
 const analyzeLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 20,
+  max: 25,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many analysis requests. Please wait a minute and try again.' },
 });
 
+const quizLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many quiz requests. Please wait a minute and try again.' },
+});
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 30,
+  max: 40,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many authentication attempts. Please try again after 15 minutes.' },
@@ -112,25 +125,29 @@ export function authMiddleware(req, res, next) {
 }
 
 // ==========================================
-// 1. HEALTH AND STATUS ENDPOINT
+// 1. HEALTH AND STATUS ENDPOINT (SAFE METADATA)
 // ==========================================
 app.get('/api/status', (req, res) => {
-  const hasKey = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim());
+  const { isConfigured, model, provider } = getGeminiConfig();
+
   res.json({
     status: 'ok',
-    aiEnabled: hasKey,
-    engine: hasKey ? 'Gemini 2.5 Flash (Live AI)' : 'Curated Heuristic Engine (Demo Mode)'
+    aiEnabled: isConfigured,
+    aiConfigured: isConfigured,
+    engine: isConfigured ? `Gemini LLM (${model})` : 'Fallback Analysis (Heuristic Engine)',
+    model: isConfigured ? model : null,
+    provider,
+    database: 'SQLite (WAL Mode)',
+    persistenceNotice: 'Render Free web services run on ephemeral disks. For permanent storage across re-deploys, mount a persistent disk.',
+    timestamp: new Date().toISOString()
   });
 });
 
 // ==========================================
-// 2. AUTHENTICATION ENDPOINTS (NO ACCOUNT ENUMERATION)
+// 2. AUTHENTICATION ENDPOINTS
 // ==========================================
-
-// Password policy: minimum 8 characters, at least 1 letter and 1 number
 const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
 
-// Student Registration
 app.post('/api/auth/register', authLimiter, async (req, res) => {
   const { name, email, password, college, graduationYear } = req.body || {};
 
@@ -147,7 +164,6 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
   const cleanEmail = email.trim().toLowerCase();
   const existing = userQueries.findByEmail(cleanEmail);
   if (existing) {
-    // Generic response to mitigate email enumeration
     return res.status(400).json({ error: 'Unable to complete registration with the provided details. Please try signing in.' });
   }
 
@@ -187,7 +203,6 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
   }
 });
 
-// Student Login (Constant-time check to prevent timing-based user enumeration)
 app.post('/api/auth/login', authLimiter, async (req, res) => {
   const { email, password } = req.body || {};
 
@@ -198,7 +213,6 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
   const cleanEmail = email.trim().toLowerCase();
   const user = userQueries.findByEmail(cleanEmail);
 
-  // Constant-time dummy hash comparison to prevent timing-based enumeration
   const DUMMY_HASH = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
   const hashToCompare = user ? user.password_hash : DUMMY_HASH;
   const passwordMatch = await bcrypt.compare(password, hashToCompare);
@@ -228,7 +242,6 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
   });
 });
 
-// Verify current session / token
 app.get('/api/auth/me', authMiddleware, (req, res) => {
   const user = userQueries.findById(req.user.id);
   if (!user) {
@@ -249,21 +262,18 @@ app.get('/api/auth/me', authMiddleware, (req, res) => {
 });
 
 // ==========================================
-// 3. APPLICATION TRACKING ENDPOINTS (STRICT ISOLATION)
+// 3. APPLICATION TRACKING ENDPOINTS
 // ==========================================
-
 function generateRefId() {
   const stamp = Date.now().toString(36).toUpperCase();
   const rand = crypto.randomBytes(3).toString('hex').toUpperCase();
   return `BEEP-${stamp}-${rand}`;
 }
 
-// Submit a new application (Strictly bound to authenticated student)
 app.post('/api/applications', authMiddleware, (req, res) => {
   const { phone, githubUrl, role, company, matchScore } = req.body || {};
   const errors = [];
 
-  // Strictly bind name and email to authenticated session
   const name = req.user.name;
   const email = req.user.email;
 
@@ -332,7 +342,6 @@ app.post('/api/applications', authMiddleware, (req, res) => {
   });
 });
 
-// Get applications (STRICT ISOLATION: returns ONLY the authenticated user's records)
 app.get('/api/applications', authMiddleware, (req, res) => {
   try {
     const apps = applicationQueries.listByUserId(req.user.id);
@@ -357,258 +366,118 @@ app.get('/api/applications', authMiddleware, (req, res) => {
 });
 
 // ==========================================
-// 4. AI & HEURISTIC ANALYSIS ENDPOINT
+// 4. SEMANTIC LLM RESUME ANALYSIS ENDPOINT
 // ==========================================
-
-const MAX_FIELD_CHARS = 50000;
-function validateAnalyzeBody(body) {
-  const errors = [];
-  const { studentSkills, jobDescription, targetRole, companyName } = body || {};
-  if (typeof studentSkills !== 'string' || studentSkills.trim().length === 0) {
-    errors.push('studentSkills must be a non-empty string.');
-  } else if (studentSkills.length > MAX_FIELD_CHARS) {
-    errors.push(`studentSkills exceeds the ${MAX_FIELD_CHARS} character limit.`);
-  }
-  if (typeof jobDescription !== 'string' || jobDescription.trim().length === 0) {
-    errors.push('jobDescription must be a non-empty string.');
-  } else if (jobDescription.length > MAX_FIELD_CHARS) {
-    errors.push(`jobDescription exceeds the ${MAX_FIELD_CHARS} character limit.`);
-  }
-  if (targetRole !== undefined && (typeof targetRole !== 'string' || targetRole.length > 200)) {
-    errors.push('targetRole must be a string under 200 characters.');
-  }
-  if (companyName !== undefined && (typeof companyName !== 'string' || companyName.length > 200)) {
-    errors.push('companyName must be a string under 200 characters.');
-  }
-  return errors;
-}
-
-// Comprehensive Schema Validator for AI Output
-function validateAIResult(data) {
-  if (!data || typeof data !== 'object') return 'Response is not an object.';
-  if (typeof data.matchScore !== 'number' || Number.isNaN(data.matchScore) || data.matchScore < 0 || data.matchScore > 100) {
-    return 'matchScore must be a number between 0 and 100.';
-  }
-  if (typeof data.targetRole !== 'string' || typeof data.company !== 'string') {
-    return 'targetRole and company must be strings.';
-  }
-  if (!data.skillsBreakdown || typeof data.skillsBreakdown !== 'object') {
-    return 'skillsBreakdown is missing.';
-  }
-  for (const key of ['matched', 'transferable', 'missingCritical']) {
-    if (!Array.isArray(data.skillsBreakdown[key])) return `skillsBreakdown.${key} must be an array.`;
-    if (data.skillsBreakdown[key].length > 100) return `skillsBreakdown.${key} exceeds size limit.`;
-    for (const item of data.skillsBreakdown[key]) {
-      if (typeof item !== 'string') return `skillsBreakdown.${key} items must be strings.`;
-    }
-  }
-  if (!Array.isArray(data.sevenDayPlan) || data.sevenDayPlan.length < 1) {
-    return 'sevenDayPlan must be an array with at least one entry.';
-  }
-  for (const dayEntry of data.sevenDayPlan) {
-    if (typeof dayEntry !== 'object' || typeof dayEntry.day !== 'string' || typeof dayEntry.phase !== 'string') {
-      return 'sevenDayPlan entries must have day and phase strings.';
-    }
-    if (!Array.isArray(dayEntry.tasks)) return 'sevenDayPlan tasks must be an array.';
-  }
-  return null;
-}
-
 app.post('/api/analyze', analyzeLimiter, async (req, res) => {
-  const validationErrors = validateAnalyzeBody(req.body);
-  if (validationErrors.length > 0) {
-    return res.status(400).json({ error: 'Invalid request', details: validationErrors });
+  const { studentSkills, jobDescription, targetRole, companyName } = req.body || {};
+
+  const validation = validateInputPayload({
+    resumeText: studentSkills,
+    jobDescription,
+    targetRole,
+    companyName
+  });
+
+  if (!validation.isValid) {
+    return res.status(400).json({ error: 'Validation failed', details: validation.errors });
   }
-
-  const { studentSkills, jobDescription, targetRole, companyName } = req.body;
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
-
-  // Heuristic mode: no Gemini key configured
-  if (!apiKey) {
-    const heuristicResult = runDynamicHeuristicAnalysis(studentSkills, jobDescription, targetRole, companyName);
-    return res.json(heuristicResult);
-  }
-
-  // Live Gemini analysis with a hard 15s timeout
-  const controller = new AbortController();
-  const timeoutHandle = setTimeout(() => controller.abort(), 15_000);
 
   try {
-    const prompt = `
-You are a career mentor for Beep, evaluating an Indian college student's resume against an internship job description.
-Calculate an honest match score that accurately reflects whether the candidate has the required technical stack.
-
-IMPORTANT CONSTRAINTS:
-- Do NOT invent metrics, percentages, or achievements the candidate did not explicitly state.
-- When suggesting resume bullets, use bracketed placeholders like [X]%, [N] tests, [Y]% uptime so the student fills in real numbers.
-- Do NOT claim you verified external code or live links; only evaluate what is written in the text.
-
-STUDENT RESUME CONTENT:
-${studentSkills}
-
-TARGET INTERNSHIP JOB DESCRIPTION:
-${jobDescription}
-
-TARGET ROLE TITLE:
-${targetRole || 'Internship Candidate'}
-
-COMPANY NAME:
-${companyName || 'Target Company'}
-
-Respond strictly with valid JSON without any markdown formatting or backticks:
-{
-  "targetRole": "${targetRole || 'Internship Candidate'}",
-  "company": "${companyName || 'Target Company'}",
-  "matchScore": 68,
-  "readinessLevel": "High Match - Ready to Apply | Moderate Match - 7-Day Sprint Needed | Developing Match",
-  "badgeColor": "emerald | blue | amber",
-  "resumeStats": {
-    "wordCount": 240,
-    "hasLiveLinks": true,
-    "hasMetrics": true,
-    "skillsIdentified": 8
-  },
-  "silentRejectionFlags": [
-    {
-      "type": "critical | warning | pass",
-      "title": "Clear short flag title",
-      "description": "Specific explanation of why an ATS or recruiter might flag or pass this"
-    }
-  ],
-  "scoreBreakdown": {
-    "mustHaveCoverage": "Percentage of required skills possessed",
-    "transferableBonus": "Bonus potential from related skills",
-    "riskFactor": "Areas where the resume lacks required keywords"
-  },
-  "skillsBreakdown": {
-    "matched": ["SKILL1", "SKILL2"],
-    "transferable": ["SKILL3 (Bridgeable)"],
-    "missingCritical": ["MISSING_SKILL1", "MISSING_SKILL2"]
-  },
-  "recruiterInsight": "Direct, empathetic 2-sentence explanation of what a recruiter typically notices when reading this specific resume for this role.",
-  "proofOfWorkProject": {
-    "title": "Clear Name for a 48-Hour Micro Project",
-    "deliverable": "Specific description of what the student should build over a weekend to prove the #1 missing skill. Only claim metrics the student actually measures.",
-    "estimatedHours": "6-8 hours"
-  },
-  "sevenDayPlan": [
-    { "day": "Day 1 & 2", "phase": "Core Concept Immersion", "tasks": ["Task 1", "Task 2"] },
-    { "day": "Day 3 & 4", "phase": "The 48-Hour Proof-of-Work Project", "tasks": ["Task 1", "Task 2"] },
-    { "day": "Day 5", "phase": "Resume Optimization (Google XYZ Formula)", "tasks": ["Task 1", "Task 2"] },
-    { "day": "Day 6", "phase": "Targeted Outreach", "tasks": ["Task 1", "Task 2"] },
-    { "day": "Day 7", "phase": "Final Preparation & Submission", "tasks": ["Task 1", "Task 2"] }
-  ],
-  "applicationBooster": {
-    "metricNotice": "Replace every [X]/[Y]/[N] placeholder with a real measured number before adding these bullets to your resume.",
-    "tailoredBullets": [
-      "XYZ bullet using bracketed placeholders like [X]% - never invented numbers",
-      "Another bullet using [Y] placeholders",
-      "Third bullet using [N]/[M] placeholders"
-    ],
-    "coldPitchMessage": "A concise 4-sentence high-intent outreach template with bracketed fields the student fills in."
-  }
-}
-`;
-
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.2, responseMimeType: 'application/json' }
-        }),
-        signal: controller.signal
-      }
+    const analysis = await analyzeResumeWithGemini(
+      studentSkills,
+      jobDescription,
+      targetRole || 'Internship Candidate',
+      companyName || 'Target Company'
     );
-    clearTimeout(timeoutHandle);
+    return res.json(analysis);
+  } catch (err) {
+    console.error('Analysis execution error:', err);
+    return res.status(500).json({ error: 'Analysis failed due to a server error.' });
+  }
+});
 
-    if (!response.ok) {
-      const fallbackResult = runDynamicHeuristicAnalysis(studentSkills, jobDescription, targetRole, companyName);
-      fallbackResult.fallbackNotice = `Gemini API returned status ${response.status}. Evaluated using offline heuristic engine.`;
-      return res.json(fallbackResult);
+// ==========================================
+// 5. EXPERT ADAPTIVE QUIZ ENDPOINTS
+// ==========================================
+
+// Generate Expert Quiz (Zero answer leakage)
+app.post('/api/quiz/generate', quizLimiter, async (req, res) => {
+  const { targetRole, jobDescription, skillGaps, difficulty, questionCount } = req.body || {};
+
+  // Extract optional user ID if auth header exists
+  let userId = null;
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const decoded = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
+      userId = decoded.id;
+    } catch {
+      // Guest testing permitted
     }
+  }
 
-    const result = await response.json();
-    const candidateText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!candidateText) throw new Error('No content returned from Gemini model');
-
-    const cleanedText = candidateText.replace(/```json/g, '').replace(/```/g, '').trim();
-    const parsedData = JSON.parse(cleanedText);
-
-    const validationError = validateAIResult(parsedData);
-    if (validationError) {
-      const fallbackResult = runDynamicHeuristicAnalysis(studentSkills, jobDescription, targetRole, companyName);
-      fallbackResult.fallbackNotice = `AI output failed validation (${validationError}). Showing heuristic match results.`;
-      return res.json(fallbackResult);
-    }
-
-    return res.json({
-      ...parsedData,
-      isAIGenerated: true,
-      engine: 'Gemini 2.5 Flash (Live AI)',
-      timestamp: new Date().toISOString()
+  try {
+    const quiz = await generateExpertQuiz({
+      targetRole: typeof targetRole === 'string' && targetRole.trim() ? targetRole.trim() : 'Software Engineering Intern',
+      jobDescription: typeof jobDescription === 'string' ? jobDescription : '',
+      skillGaps: Array.isArray(skillGaps) ? skillGaps : [],
+      difficulty: typeof difficulty === 'string' ? difficulty : 'expert',
+      questionCount: typeof questionCount === 'number' && questionCount > 0 && questionCount <= 10 ? questionCount : 5,
+      userId
     });
-  } catch (error) {
-    clearTimeout(timeoutHandle);
-    const reason = error.name === 'AbortError' ? 'Gemini API timed out after 15 seconds.' : 'AI provider connection error.';
-    console.error('Error during AI analysis, invoking fallback:', error.message);
-    const fallbackResult = runDynamicHeuristicAnalysis(studentSkills, jobDescription, targetRole, companyName);
-    fallbackResult.fallbackNotice = `${reason} Showing heuristic match estimate instead.`;
-    return res.json(fallbackResult);
+
+    return res.json(quiz);
+  } catch (err) {
+    console.error('Quiz generation error:', err);
+    return res.status(500).json({ error: 'Failed to generate quiz assessment.' });
+  }
+});
+
+// Grade Expert Quiz (Server-Side Evaluation & Explanations)
+app.post('/api/quiz/grade', quizLimiter, async (req, res) => {
+  const { sessionId, userAnswers } = req.body || {};
+
+  if (!sessionId || typeof sessionId !== 'string') {
+    return res.status(400).json({ error: 'A valid sessionId string is required.' });
+  }
+  if (!userAnswers || typeof userAnswers !== 'object') {
+    return res.status(400).json({ error: 'userAnswers object is required.' });
+  }
+
+  // Extract optional user ID
+  let userId = null;
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const decoded = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
+      userId = decoded.id;
+    } catch {
+      // ignore
+    }
+  }
+
+  try {
+    const graded = await gradeQuizSession(sessionId, userAnswers, userId);
+    return res.json(graded);
+  } catch (err) {
+    console.error('Quiz grading error:', err);
+    return res.status(400).json({ error: err.message || 'Failed to grade quiz session.' });
   }
 });
 
 // --- Serve Production Client Bundle ---
 const distPath = path.resolve(__dirname, '../dist');
 if (fs.existsSync(distPath)) {
-  // 1. Serve hashed static assets with immutable cache; missing assets return 404 (NEVER index.html)
-  app.use('/assets', express.static(path.join(distPath, 'assets'), {
-    immutable: true,
-    maxAge: '1y',
-    fallthrough: false
-  }));
-
-  // 2. Serve static root files (favicon.svg, icons.svg, etc.)
-  app.use(express.static(distPath, {
-    index: false,
-    maxAge: '1h'
-  }));
-
-  // 3. SPA catch-all navigation: serve fresh index.html with no-cache headers
+  app.use(express.static(distPath));
   app.use((req, res, next) => {
     if (req.method === 'GET' && !req.path.startsWith('/api')) {
-      // If the request targets a file with an extension, return 404 rather than corrupting scripts with HTML
-      if (path.extname(req.path)) {
-        return res.status(404).json({ error: 'Asset not found', path: req.path });
-      }
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
       return res.sendFile(path.join(distPath, 'index.html'));
     }
     next();
   });
-} else {
-  // Graceful fallback if production bundle has not been compiled yet
-  app.get('/', (req, res) => {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(`
-      <!doctype html>
-      <html>
-        <head><title>Beep Readiness Radar - Build Required</title></head>
-        <body style="font-family: system-ui, sans-serif; background: #020617; color: #f8fafc; padding: 40px; text-align: center;">
-          <h1 style="color: #c084fc;">Beep Readiness Radar Backend Active</h1>
-          <p style="color: #94a3b8;">The client production bundle is not yet built. Run <code style="background: #1e293b; color: #38bdf8; padding: 4px 8px; border-radius: 6px;">npm run build</code> to compile assets.</p>
-          <p style="color: #94a3b8;">For local live-reload development, visit <a href="http://localhost:5173" style="color: #818cf8;">http://localhost:5173</a>.</p>
-        </body>
-      </html>
-    `);
-  });
 }
 
-export { runDynamicHeuristicAnalysis };
+export { app, runDynamicHeuristicAnalysis };
 
 // --- Global Error Handling Middleware ---
 app.use((err, req, res, next) => {
@@ -627,9 +496,19 @@ process.on('uncaughtException', (err) => {
   console.error('[Beep Uncaught Exception]:', err);
 });
 
-app.listen(PORT, () => {
-  console.log(`[Beep Server] Backend API running at http://localhost:${PORT}`);
-  console.log(`[Beep Server] Persistence: SQLite active with WAL journal mode`);
-  console.log(`[Beep Server] Security: JWT sessions active, Helmet CSP enabled`);
-  console.log(`[Beep Server] Mode: ${process.env.GEMINI_API_KEY ? 'Live Gemini AI' : 'Curated Heuristic Engine'}`);
-});
+// Only bind listener if executed directly (supports test runner importing app)
+const isDirectRun = !process.env.NODE_TEST_CONTEXT && process.argv[1] && (
+  process.argv[1].endsWith('index.js') || 
+  process.argv[1].endsWith('server') ||
+  process.argv[1].includes('server' + path.sep + 'index.js') ||
+  process.argv[1].includes('server/index.js')
+);
+
+if (isDirectRun) {
+  app.listen(PORT, () => {
+    console.log(`[Beep Server] Backend API running at http://localhost:${PORT}`);
+    console.log(`[Beep Server] Persistence: SQLite active with WAL journal mode`);
+    console.log(`[Beep Server] Security: JWT sessions active, Helmet CSP enabled`);
+    console.log(`[Beep Server] Mode: ${isGeminiConfigured() ? 'Live Gemini LLM' : 'Curated Heuristic Fallback'}`);
+  });
+}

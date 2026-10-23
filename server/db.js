@@ -61,12 +61,34 @@ const initSchemaTransaction = db.transaction(() => {
     CREATE INDEX IF NOT EXISTS idx_applications_user_id ON applications(user_id);
     CREATE INDEX IF NOT EXISTS idx_applications_user_email ON applications(user_email);
     CREATE INDEX IF NOT EXISTS idx_applications_ref_id ON applications(ref_id);
+
+    CREATE TABLE IF NOT EXISTS quiz_sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      target_role TEXT NOT NULL,
+      difficulty TEXT NOT NULL DEFAULT 'expert',
+      questions_public TEXT NOT NULL,
+      answer_keys TEXT NOT NULL,
+      user_answers TEXT,
+      score INTEGER,
+      status TEXT NOT NULL DEFAULT 'IN_PROGRESS',
+      created_at TEXT NOT NULL,
+      completed_at TEXT,
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_quiz_sessions_user_id ON quiz_sessions(user_id);
   `);
 
-  // Record initial migration
+  // Record migrations
   const hasInit = db.prepare('SELECT 1 FROM _migrations WHERE name = ?').get('001_initial_schema');
   if (!hasInit) {
     db.prepare('INSERT INTO _migrations (name, applied_at) VALUES (?, ?)').run('001_initial_schema', new Date().toISOString());
+  }
+
+  const hasQuiz = db.prepare('SELECT 1 FROM _migrations WHERE name = ?').get('002_quiz_sessions_schema');
+  if (!hasQuiz) {
+    db.prepare('INSERT INTO _migrations (name, applied_at) VALUES (?, ?)').run('002_quiz_sessions_schema', new Date().toISOString());
   }
 });
 
@@ -163,6 +185,55 @@ export const applicationQueries = {
 
   listByUserEmail(email) {
     return db.prepare('SELECT * FROM applications WHERE user_email = ? ORDER BY submitted_at DESC').all(email.trim().toLowerCase());
+  }
+};
+
+// --- Exported Quiz Session Queries ---
+export const quizQueries = {
+  createSession({ id, userId, targetRole, difficulty, questionsPublic, answerKeys }) {
+    const sessionId = id || 'qz_' + crypto.randomUUID();
+    const now = new Date().toISOString();
+    db.prepare(`
+      INSERT INTO quiz_sessions (id, user_id, target_role, difficulty, questions_public, answer_keys, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, 'IN_PROGRESS', ?)
+    `).run(
+      sessionId,
+      userId || null,
+      targetRole || 'Software Engineering Intern',
+      difficulty || 'expert',
+      typeof questionsPublic === 'string' ? questionsPublic : JSON.stringify(questionsPublic),
+      typeof answerKeys === 'string' ? answerKeys : JSON.stringify(answerKeys),
+      now
+    );
+    return this.findById(sessionId);
+  },
+
+  findById(id) {
+    if (!id) return null;
+    return db.prepare('SELECT * FROM quiz_sessions WHERE id = ?').get(id);
+  },
+
+  completeSession(id, { userAnswers, score }) {
+    const now = new Date().toISOString();
+    db.prepare(`
+      UPDATE quiz_sessions
+      SET user_answers = ?,
+          score = ?,
+          status = 'COMPLETED',
+          completed_at = ?
+      WHERE id = ?
+    `).run(
+      typeof userAnswers === 'string' ? userAnswers : JSON.stringify(userAnswers),
+      score,
+      now,
+      id
+    );
+    return this.findById(id);
+  },
+
+  listByUserId(userId) {
+    if (!userId) return [];
+    return db.prepare('SELECT id, target_role, difficulty, score, status, created_at, completed_at FROM quiz_sessions WHERE user_id = ? ORDER BY created_at DESC').all(userId);
   }
 };
 
