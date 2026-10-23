@@ -36,21 +36,29 @@ After reviewing the Beep app ([Android](https://play.google.com/store/apps/detai
 
 ---
 
-## 📈 The 7-Day Metric: Putting a Number on It
+## 📈 The 7-Day Metric: Measuring Real Student Progress
 
-### Primary North Star Metric
-* **Candidate Screening-to-Interview Callback Rate**
-  * **Baseline (Unassisted Applications):** **4.2%**
-  * **Target (With Beep Readiness Radar):** **14.8%** (**3.5× improvement**)
+### Primary Metric
+**Average improvement in technical assessment scores**
 
-### Secondary Metric
-* **Average Technical Readiness Score Jump:** Moves from a baseline average of **52/100 (Partial Alignment)** to **74/100 (Good Alignment)** within 7 days (**+22 points**) after completing the 48-hour proof-of-work project.
+- **Baseline:** Each participating student's score on an initial assessment.
+- **Target:** An average improvement of at least 15 percentage points after seven days of using the personalized preparation plan.
+- **Status:** This is a proposed target, not a measured result.
 
-### How to Prove It in 7 Days (The 7-Day A/B Cohort Test)
-1. **Day 1 (Cohort Split):** Form an A/B test of 100 Beep applicants. Control (50) applies with standard resumes; Test (50) uses Beep Readiness Radar.
-2. **Days 2–4 (Weekend Execution):** Test cohort builds and deploys their 48-hour proof-of-work project to bridge their #1 gap, tracking completion via submitted GitHub links.
-3. **Day 5 (Optimized Submission):** Test cohort updates resumes with verified Google XYZ bullets and applies via Beep.
-4. **Day 7 (Measurement):** Measure the 7-day delta in (1) Re-tested Readiness Score (+22 points), (2) Recruiter interview callbacks (3.5× higher), and (3) Student confidence NPS (jumping from 28 to 74).
+### Seven-Day Experiment
+
+1. **Day 1 — Baseline:** Recruit 5–10 students preparing for internships. Record their target roles and initial assessment scores.
+2. **Days 2–5 — Preparation:** Generate individualized skill-gap reports and preparation plans. Ask students to complete the recommended activities and record completion.
+3. **Day 6 — Practice:** Have students complete a follow-up assessment covering comparable topics at a similar difficulty level.
+4. **Day 7 — Measurement:** Calculate each student's score change, average improvement, and preparation-plan completion rate.
+
+### Measurement Formula
+
+Average score improvement = average follow-up score − average baseline score.
+
+Report the number of participants, initial and follow-up averages, completion rate, and actual improvement. If the target is not achieved, report the result honestly and investigate why.
+
+**Longer-term outcome:** Track internship applications and interview callbacks over a longer period. Do not claim a callback-rate improvement until sufficient real application data has been collected.
 
 ---
 
