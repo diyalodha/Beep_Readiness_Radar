@@ -131,47 +131,133 @@ d:\EventBeep_Founder's_Office
 
 ## 🧠 Semantic LLM Analysis & Threshold-Based Scoring Policy
 
-### 1. Dual-Engine Transparency
-* **Real Gemini LLM Mode:** When `GEMINI_API_KEY` is configured, calls the official `@google/genai` SDK using `gemini-2.5-flash` with structured JSON output, a 25-second timeout, bounded backoff retries, and strict XML sandboxing against prompt injection.
-* **Fallback Mode:** If Gemini is unconfigured, rate-limited, or unavailable, the backend automatically engages `Fallback Analysis (Dynamic Heuristic Engine)`, returning the full unified schema with verified text quotes and explicit fallback notices. No fabricated AI claims.
+### 1. Dual-Engine Analysis and Transparency
 
-### 2. Weighted Dimension Breakdown
-Rather than arbitrary keyword counts, readiness is calculated using a mathematically verified policy:
-$$\text{Readiness Score} = 0.35 \times \text{Required} + 0.25 \times \text{Evidence} + 0.15 \times \text{Experience} + 0.15 \times \text{Preferred} + 0.10 \times \text{Transferable}$$
+- **Gemini LLM Mode:** When `GEMINI_API_KEY` is configured and the service is available, the backend uses Google's official `@google/genai` SDK with `gemini-2.5-flash` to perform semantic resume–job description analysis. Structured JSON output, a 25-second timeout, bounded retries, and XML-delimited input boundaries help improve response consistency and reduce prompt-injection risks.
+- **Dynamic Heuristic Fallback:** If Gemini is unavailable, rate-limited, or not configured, the backend can fall back to a rule-based analysis engine. The fallback follows the unified response schema and should clearly identify fallback mode rather than presenting heuristic output as LLM-generated analysis.
+- **Evidence Validation:** Generated findings and supporting quotes should be checked against the supplied resume and job description. Unsupported evidence must not be presented as verified, and fallback or validation limitations should be disclosed.
 
-* **Required Competencies (35%):** Must-have core technologies and foundational stack qualifications.
-* **Depth of Evidence (25%):** Verifiable projects, measurable metrics, code links, and technical depth.
-* **Relevant Experience (15%):** Production exposure, internships, and domain experience.
-* **Preferred Competencies (15%):** Bonus technologies and nice-to-have tools.
-* **Transferable Skills (10%):** Adjacent languages and architectures that translate to the target stack.
+### 2. Weighted Readiness Score
 
-### 3. Mandatory Prerequisite Blocker Cap
-If a mandatory qualification or prerequisite skill is missing from the candidate resume, the score is capped at **65%** and the readiness band is classified as `Partial Alignment (Critical Prerequisite Missing)`.
+Readiness is calculated using five weighted dimensions:
+
+\[
+\begin{aligned}
+\text{Readiness Score} ={}&
+0.35R + 0.25E + 0.15X\\
+&+ 0.15P + 0.10T
+\end{aligned}
+\]
+
+Here, each dimension is scored from 0 to 100 before weighting.
+
+- **Required Competencies (35%):** Coverage of essential technologies, core skills, and mandatory job requirements.
+- **Depth of Evidence (25%):** Strength of supporting evidence, including relevant projects, demonstrated technical depth, measurable outcomes, and code or portfolio links where available.
+- **Relevant Experience (15%):** Relevant internships, practical work, project experience, and domain exposure.
+- **Preferred Competencies (15%):** Coverage of desirable technologies, additional tools, and other non-mandatory qualifications.
+- **Transferable Skills (10%):** Relevant adjacent technologies, concepts, and experience that may transfer to the target role.
+
+The weighted formula produces a preliminary score. Any applicable prerequisite cap is applied afterward to determine the final readiness score.
+
+### 3. Mandatory Prerequisite Blocker
+
+If a qualification or skill explicitly identified as mandatory by the job description is missing from the supplied resume, the system applies a maximum score of **65%**, provided the requirement has been reliably identified as a genuine prerequisite.
+
+The final score is calculated as:
+
+\[
+\text{Final Score} =
+\min(\text{Weighted Score},\text{Applicable Cap})
+\]
+
+When a mandatory prerequisite is missing, the applicable cap is 65%. The report should identify the missing requirement and explain its impact instead of treating the score alone as sufficient guidance.
+
+**Important:** A missing mention in a resume does not necessarily prove that the candidate lacks the skill. The system should distinguish between *not demonstrated in the supplied resume* and *confirmed missing* wherever the available evidence cannot establish the difference.
 
 ### 4. Readiness Classification Bands
-* **85–100%:** `Strong Alignment` (Immediate Fast-Track)
-* **70–84%:** `Good Alignment` (Minor Addressable Gaps)
-* **50–69%:** `Partial Alignment` (Foundational Experience Present)
-* **0–49%:** `Significant Gaps` (Structured Preparation Needed)
 
+| Final score | Readiness band | Interpretation |
+|---|---|---|
+| 85–100% | **Strong Alignment** | Strong evidence of alignment with the role's requirements. |
+| 70–84% | **Good Alignment** | Substantial alignment, with identifiable gaps to address. |
+| 50–69% | **Partial Alignment** | Some relevant skills are demonstrated, but important gaps remain. |
+| 0–49% | **Significant Gaps** | More foundational preparation may be needed. |
+
+The readiness band is based on the final score after applying any prerequisite cap. These bands are decision-support indicators, not guarantees of hiring success.
+
+### 5. Personalized Preparation and Honest Reporting
+
+The final analysis should connect each identified gap to a practical next step, including:
+
+- A targeted 48-hour mini-project blueprint.
+- A personalized seven-day preparation plan based on the candidate's current gaps.
+- Role-relevant technical questions and server-side answer evaluation.
+- Interview preparation, STAR-format answer guidance, and a tailored LinkedIn outreach message.
+
+The depth of preparation should reflect the candidate's actual gaps: a candidate with 90% readiness should receive focused guidance on remaining weaknesses, while a candidate with 70% readiness should receive a broader plan addressing foundational and role-specific gaps.
+
+The system must clearly distinguish LLM-generated findings, heuristic fallback results, and evidence that has actually been validated. Readiness scores are estimates based on the supplied information, not predictions or guarantees of selection.
+
+## 🎓 Adaptive, Resume-Guided Technical Quiz
+
+### 1. Resume-Guided, Role-Relevant Scenarios
+
+- **Personalized Question Generation:** Uses the candidate's supplied resume, stated projects, technologies, target job description, and identified skill gaps to generate relevant technical questions and practical scenarios.
+- **Applied Technical Reasoning:** Questions can test concepts such as Redux state management, SQL query optimization, API latency trade-offs, debugging, and system design when relevant to the candidate's background and target role.
+- **Gap-Focused Practice:** Prioritizes weaker or insufficiently demonstrated skills so candidates can focus their preparation on the areas most relevant to their target internship.
+
+### 2. Server-Side Answer-Key Protection
+
+- **Separate Public and Private Data:** The `POST /api/quiz/generate` endpoint should return questions and permitted display metadata without exposing correct answer indexes, grading rubrics, or sample answers.
+- **Server-Side Answer-Key Storage:** Correct answers and grading information should remain on the server, associated with the relevant quiz session in the SQLite `quiz_sessions` table.
+- **Reduced Answer Leakage:** The frontend should receive only the information needed to display questions and collect responses. Server-side storage reduces exposure through API responses, although complete protection also requires checking logs, database access, and other API endpoints.
+
+### 3. Server-Side Grading and Skill-Gap Diagnosis
+
+- **Backend Evaluation:** The `POST /api/quiz/grade` endpoint evaluates submitted answers against the server-side answer key or grading criteria.
+- **Question-Level Feedback:** Returns explanations for answers and identifies concepts that need further revision, where supported by the grading implementation.
+- **Targeted Revision:** Uses quiz results to guide the candidate toward relevant learning resources, practice questions, and preparation activities.
+- **Preparation Feedback Loop:** Combines resume analysis and quiz performance to help candidates prioritize skill gaps instead of following a generic study plan.
+
+### 4. Intended Outcome
+
+Help students move from identifying internship skill gaps to practising the relevant concepts and measuring their progress. The quiz is designed to support focused preparation; its effectiveness should be evaluated through assessment results and student feedback rather than assumed in advance.
 ---
 
-## 🎓 Expert-Level Adaptive Tech Quiz
+## 🔒 Security, Authentication & Operational Standards
 
-* **100% Resume-Personalized Scenarios:** Synthesized directly from candidate stated projects, libraries, and diagnosed gaps (e.g., verifying Redux state management, SQL query execution plans, or API latency trade-offs).
-* **Zero Client-Side Answer Leakage:** When generating a quiz via `POST /api/quiz/generate`, the public question payload returned to the client contains **zero** correct answer indexes, rubrics, or sample answers. Secret keys are persisted securely in the SQLite `quiz_sessions` table.
-* **Server-Side Grading & Gap Diagnosis:** Client submissions to `POST /api/quiz/grade` are evaluated against server keys, returning per-question architectural explanations and diagnosed knowledge gaps for focused revision.
+### 1. Safe System Status Endpoint
 
----
+- **Operational Health Checks:** `GET /api/status` reports service health and non-sensitive configuration metadata, including `aiConfigured`, `engine`, `model`, `provider`, `database`, and `persistenceNotice`.
+- **Secret Protection:** API keys, passwords, JWT secrets, and other sensitive environment values must never be included in public status responses or error messages.
 
-## 🔒 Enterprise Security & Operational Standards
+### 2. Password Security and Authentication
 
-* **Safe Status Endpoint:** `GET /api/status` provides safe system metadata (`aiConfigured`, `engine`, `model`, `provider`, `database`, `persistenceNotice`) without leaking secrets.
-* **Cryptographic Authentication:** Passwords hashed with `bcryptjs` (salt rounds: 10), sessions secured with signed `jsonwebtoken` (JWT, 24-hour lifetime).
-* **Strict User Isolation:** Students can only fetch and submit their own applications and audits (`WHERE user_id = req.user.id`).
-* **HTTP Security Headers:** Protected with `helmet` Content Security Policy, preventing clickjacking and cross-site scripting.
-* **Rate Limiting:** Guarded by `express-rate-limit` (20 analysis calls/min, 30 auth attempts/15 min).
+- **Password Hashing:** Uses `bcryptjs` with 10 salt rounds to hash passwords before storing them.
+- **JWT-Based Sessions:** Uses signed JSON Web Tokens with a 24-hour lifetime to authenticate requests.
+- **Token Validation:** Protected endpoints must verify token signatures and expiration before granting access.
 
+### 3. User-Level Data Isolation
+
+- **Authenticated Data Access:** Application and analysis-history queries are scoped to the authenticated user's ID, using conditions such as `WHERE user_id = req.user.id`.
+- **Ownership Validation:** Create, read, update, and delete operations must verify record ownership to prevent users from accessing or modifying another student's data.
+
+### 4. HTTP Security Headers
+
+- **Helmet Integration:** Uses Helmet to configure HTTP security headers, including Content Security Policy where configured.
+- **Browser-Side Protection:** These headers help reduce risks such as clickjacking and certain cross-site scripting (XSS) attacks. They complement, rather than replace, secure input handling, output encoding, and other application-level protections.
+
+### 5. API Rate Limiting
+
+- **Analysis Endpoint:** Configured to limit analysis requests to 20 calls per minute.
+- **Authentication Endpoints:** Configured to limit authentication attempts to 30 requests per 15 minutes.
+- **Abuse Mitigation:** Rate limiting helps reduce excessive requests and automated abuse. Its effectiveness depends on the configured routes, client identification, and deployment environment.
+
+### 6. Deployment and Data-Persistence Considerations
+
+The current Render Free deployment uses local SQLite storage without guaranteed persistence across service restarts or redeployments. Persistent storage and appropriate backup procedures are required if application history and user records must be retained reliably.
+
+**Security note:** These controls reduce common application risks but do not, by themselves, establish that the application is fully secure or enterprise-certified. Claims should be confirmed against the current implementation and tested API behavior.
 ---
 
 ## ☁️ Deployment Guide (Render Compatibility)
