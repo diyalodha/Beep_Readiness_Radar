@@ -46,42 +46,86 @@ export default function InterviewFocusedView({
   const activeData = dynamicAnalysis || result;
   const isPersonalized = Boolean(activeData && (resumeText || result));
 
-  const questions = (Array.isArray(activeData?.suggestedInterviewTopics) && activeData.suggestedInterviewTopics.length > 0)
-    ? activeData.suggestedInterviewTopics
-    : ((Array.isArray(activeData?.interviewPreparation?.technicalQuestions) && activeData.interviewPreparation.technicalQuestions.length > 0)
-        ? activeData.interviewPreparation.technicalQuestions
-        : [
-            {
-              q: `How do you architect responsive client state transitions in ${activeRole} to minimize unneeded re-renders?`,
-              hint: 'Focus on memoization (useMemo, useCallback), atomic state slices, and virtual DOM diffing mechanisms.',
-              sampleStarAnswer: {
-                situation: `In our production dashboard project handling live candidate application metrics.`,
-                task: `We needed to ensure smooth filtering across hundreds of items without UI freezing.`,
-                action: `I implemented debounced search inputs, memoized expensive calculation selectors with useMemo, and broke down state into localized component trees.`,
-                result: `Eliminated 70% of unnecessary DOM re-renders and brought interaction latency under 16ms.`
-              }
-            },
-            {
-              q: 'How do you handle authentication, session expiration, and silent token refresh in modern web architectures?',
-              hint: 'Explain short-lived JWTs, httpOnly refresh cookies, and Axios/Fetch 401 response interceptors.',
-              sampleStarAnswer: {
-                situation: `During our secure student portal implementation with SQLite and Express backend.`,
-                task: `Safeguard candidate data from session hijacking while maintaining an uninterrupted user experience.`,
-                action: `I configured 24-hour signed JWT tokens, added a 401 response interceptor in the React client to force clean logout, and enforced server-side parameterized queries.`,
-                result: `Achieved 100% test pass rate on automated authentication and isolation unit tests.`
-              }
-            },
-            {
-              q: 'Can you describe a challenging bug you debugged in your proof-of-work project and your methodical diagnosis process?',
-              hint: 'Use the STAR format: specify logs analyzed, root cause discovered, regression test added.',
-              sampleStarAnswer: {
-                situation: `Encountered false-positive keyword matching where "Java" matched inside "JavaScript" and "C" inside "CSS".`,
-                task: `Prevent corrupted match score calculations for student resumes.`,
-                action: `Re-architected regex matching to enforce strict word boundaries (\\b) with custom handlers for special language symbols like C++ and C#.`,
-                result: `Resolved all false-positive collisions verified by 14 automated unit tests.`
-              }
-            }
-          ]);
+  // Extract raw questions from any supported schema property
+  const rawQuestions = activeData?.suggestedInterviewTopics 
+    || activeData?.interviewPreparation?.technicalQuestions 
+    || activeData?.interviewQuestions;
+
+  // Fully normalize question items: guarantee q, hint, and sampleStarAnswer are never blank
+  const questions = (Array.isArray(rawQuestions) && rawQuestions.length > 0)
+    ? rawQuestions.map((item, idx) => {
+        const questionText = item.q || item.question || item.topic || `Technical Screening Question ${idx + 1}`;
+        const hintText = item.hint || item.recruiterIntent || item.focalPoint || 'Focus on architectural trade-offs, edge cases, and engineering fundamentals.';
+        
+        let starAnswer = null;
+        if (item.sampleStarAnswer && typeof item.sampleStarAnswer === 'object') {
+          starAnswer = {
+            situation: item.sampleStarAnswer.situation || `In production engineering work for ${activeRole}.`,
+            task: item.sampleStarAnswer.task || 'Solve core domain constraints while maintaining system stability.',
+            action: item.sampleStarAnswer.action || 'Applied modular architecture, clean data contracts, and automated tests.',
+            result: item.sampleStarAnswer.result || 'Achieved sub-100ms response latency with zero regression failures.'
+          };
+        } else if (typeof item.sampleStarAnswer === 'string' && item.sampleStarAnswer.trim()) {
+          starAnswer = {
+            situation: `In engineering projects targeting ${activeRole} standards.`,
+            task: 'Address technical gaps and feature requirements under sprint deadlines.',
+            action: item.sampleStarAnswer,
+            result: 'Validated through test suites and verified live deployment.'
+          };
+        } else if (item.recommendedAnswer && typeof item.recommendedAnswer === 'string') {
+          starAnswer = {
+            situation: `In technical projects targeting ${activeRole} standards.`,
+            task: `Demonstrate hands-on execution for ${targetCompany}.`,
+            action: item.recommendedAnswer,
+            result: 'Validated through clean git commit history and working proof-of-work demonstration.'
+          };
+        } else {
+          starAnswer = {
+            situation: `Encountered during high-throughput feature implementation for ${activeRole}.`,
+            task: 'Isolate root causes and maintain optimal latency under concurrent load.',
+            action: 'Implemented defensive error boundaries, query indexing, and typed component interfaces.',
+            result: 'Zero unhandled exceptions and sub-50ms query execution times.'
+          };
+        }
+
+        return {
+          q: questionText,
+          hint: hintText,
+          sampleStarAnswer: starAnswer
+        };
+      })
+    : [
+        {
+          q: `How do you architect responsive client state transitions in ${activeRole} to minimize unneeded re-renders?`,
+          hint: 'Focus on memoization (useMemo, useCallback), atomic state slices, and virtual DOM diffing mechanisms.',
+          sampleStarAnswer: {
+            situation: `In our production dashboard project handling live candidate application metrics.`,
+            task: `We needed to ensure smooth filtering across hundreds of items without UI freezing.`,
+            action: `I implemented debounced search inputs, memoized expensive calculation selectors with useMemo, and broke down state into localized component trees.`,
+            result: `Eliminated 70% of unnecessary DOM re-renders and brought interaction latency under 16ms.`
+          }
+        },
+        {
+          q: 'How do you handle authentication, session expiration, and silent token refresh in modern web architectures?',
+          hint: 'Explain short-lived JWTs, httpOnly refresh cookies, and Axios/Fetch 401 response interceptors.',
+          sampleStarAnswer: {
+            situation: `During our secure student portal implementation with SQLite and Express backend.`,
+            task: `Safeguard candidate data from session hijacking while maintaining an uninterrupted user experience.`,
+            action: `I configured 24-hour signed JWT tokens, added a 401 response interceptor in the React client to force clean logout, and enforced server-side parameterized queries.`,
+            result: `Achieved 100% test pass rate on automated authentication and isolation unit tests.`
+          }
+        },
+        {
+          q: 'Can you describe a challenging bug you debugged in your proof-of-work project and your methodical diagnosis process?',
+          hint: 'Use the STAR format: specify logs analyzed, root cause discovered, regression test added.',
+          sampleStarAnswer: {
+            situation: `Encountered false-positive keyword matching where "Java" matched inside "JavaScript" and "C" inside "CSS".`,
+            task: `Prevent corrupted match score calculations for student resumes.`,
+            action: `Re-architected regex matching to enforce strict word boundaries (\\b) with custom handlers for special language symbols like C++ and C#.`,
+            result: `Resolved all false-positive collisions verified by 14 automated unit tests.`
+          }
+        }
+      ];
 
   const coldOutreachMessage = activeData?.applicationBooster?.coldPitchMessage 
     || activeData?.interviewPreparation?.recruiterOutreachMessage 
