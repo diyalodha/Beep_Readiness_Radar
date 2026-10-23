@@ -9,7 +9,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { userQueries, applicationQueries } from './db.js';
+import { userQueries, applicationQueries, quizQueries, analysisQueries } from './db.js';
 import { getGeminiConfig, isGeminiConfigured } from './services/geminiService.js';
 import { analyzeResumeWithGemini } from './services/semanticAnalysisService.js';
 import { validateInputPayload } from './services/analysisValidator.js';
@@ -382,6 +382,20 @@ app.post('/api/analyze', analyzeLimiter, async (req, res) => {
     return res.status(400).json({ error: 'Validation failed', details: validation.errors });
   }
 
+  // Extract optional user ID if auth header exists
+  let userId = null;
+  let userEmail = null;
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const decoded = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
+      userId = decoded.id;
+      userEmail = decoded.email;
+    } catch {
+      // Guest testing permitted
+    }
+  }
+
   try {
     const analysis = await analyzeResumeWithGemini(
       studentSkills,
@@ -389,6 +403,28 @@ app.post('/api/analyze', analyzeLimiter, async (req, res) => {
       targetRole || 'Internship Candidate',
       companyName || 'Target Company'
     );
+
+    // Persist analysis audit in SQLite if authenticated
+    if (userId) {
+      try {
+        analysisQueries.createAnalysis({
+          userId,
+          userEmail,
+          targetRole: targetRole || 'Internship Candidate',
+          companyName: companyName || 'Target Company',
+          overallScore: typeof analysis.overallReadinessScore === 'number'
+            ? analysis.overallReadinessScore
+            : (typeof analysis.matchScore === 'number' ? analysis.matchScore : analysis.overallScore),
+          readinessBand: analysis.readinessLevel || analysis.readinessBand,
+          isAIGenerated: analysis.isAIGenerated ? 1 : 0,
+          engine: analysis.engine,
+          analysisData: analysis
+        });
+      } catch (saveErr) {
+        console.error('Failed to persist analysis audit:', saveErr);
+      }
+    }
+
     return res.json(analysis);
   } catch (err) {
     console.error('Analysis execution error:', err);
@@ -396,13 +432,46 @@ app.post('/api/analyze', analyzeLimiter, async (req, res) => {
   }
 });
 
+// Retrieve User's Past Resume Audits
+app.get('/api/analyses/history', authMiddleware, (req, res) => {
+  try {
+    const history = analysisQueries.listByUserId(req.user.id);
+    return res.json({ analyses: history });
+  } catch (err) {
+    console.error('Failed to retrieve analysis history:', err);
+    return res.status(500).json({ error: 'Could not retrieve analysis history.' });
+  }
+});
+
 // ==========================================
 // 5. EXPERT ADAPTIVE QUIZ ENDPOINTS
 // ==========================================
 
-// Generate Expert Quiz (Zero answer leakage)
+// Generate Expert Quiz (Zero answer leakage & Deep Resume Personalization)
 app.post('/api/quiz/generate', quizLimiter, async (req, res) => {
-  const { targetRole, jobDescription, skillGaps, difficulty, questionCount } = req.body || {};
+  const {
+    targetRole,
+    role,
+    jobDescription,
+    customJd,
+    skillGaps,
+    detectedGaps,
+    resumeText,
+    studentSkills,
+    difficulty,
+    questionCount
+  } = req.body || {};
+
+  const effectiveRole = (targetRole || role || '').trim() || 'Software Engineering Intern';
+  const effectiveJd = typeof jobDescription === 'string' && jobDescription.trim()
+    ? jobDescription
+    : (typeof customJd === 'string' ? customJd : '');
+  const effectiveGaps = Array.isArray(skillGaps) && skillGaps.length
+    ? skillGaps
+    : (Array.isArray(detectedGaps) ? detectedGaps : []);
+  const effectiveResume = typeof resumeText === 'string' && resumeText.trim()
+    ? resumeText
+    : (typeof studentSkills === 'string' ? studentSkills : '');
 
   // Extract optional user ID if auth header exists
   let userId = null;
@@ -418,9 +487,10 @@ app.post('/api/quiz/generate', quizLimiter, async (req, res) => {
 
   try {
     const quiz = await generateExpertQuiz({
-      targetRole: typeof targetRole === 'string' && targetRole.trim() ? targetRole.trim() : 'Software Engineering Intern',
-      jobDescription: typeof jobDescription === 'string' ? jobDescription : '',
-      skillGaps: Array.isArray(skillGaps) ? skillGaps : [],
+      targetRole: effectiveRole,
+      jobDescription: effectiveJd,
+      skillGaps: effectiveGaps,
+      resumeText: effectiveResume,
       difficulty: typeof difficulty === 'string' ? difficulty : 'expert',
       questionCount: typeof questionCount === 'number' && questionCount > 0 && questionCount <= 10 ? questionCount : 5,
       userId
@@ -435,12 +505,13 @@ app.post('/api/quiz/generate', quizLimiter, async (req, res) => {
 
 // Grade Expert Quiz (Server-Side Evaluation & Explanations)
 app.post('/api/quiz/grade', quizLimiter, async (req, res) => {
-  const { sessionId, userAnswers } = req.body || {};
+  const { sessionId, userAnswers, answers } = req.body || {};
+  const finalAnswers = userAnswers || answers;
 
   if (!sessionId || typeof sessionId !== 'string') {
     return res.status(400).json({ error: 'A valid sessionId string is required.' });
   }
-  if (!userAnswers || typeof userAnswers !== 'object') {
+  if (!finalAnswers || typeof finalAnswers !== 'object') {
     return res.status(400).json({ error: 'userAnswers object is required.' });
   }
 
@@ -457,11 +528,22 @@ app.post('/api/quiz/grade', quizLimiter, async (req, res) => {
   }
 
   try {
-    const graded = await gradeQuizSession(sessionId, userAnswers, userId);
+    const graded = await gradeQuizSession(sessionId, finalAnswers, userId);
     return res.json(graded);
   } catch (err) {
     console.error('Quiz grading error:', err);
     return res.status(400).json({ error: err.message || 'Failed to grade quiz session.' });
+  }
+});
+
+// Retrieve User's Past Quiz Sessions
+app.get('/api/quiz/history', authMiddleware, (req, res) => {
+  try {
+    const sessions = quizQueries.listByUserId(req.user.id);
+    return res.json({ quizSessions: sessions });
+  } catch (err) {
+    console.error('Failed to retrieve quiz history:', err);
+    return res.status(500).json({ error: 'Could not retrieve quiz history.' });
   }
 });
 

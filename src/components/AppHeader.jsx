@@ -140,7 +140,7 @@ export default function AppHeader({
                   </span>
                 </div>
                 <p className={`text-[10px] font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Internship Readiness Radar
+                  Beep Readiness Radar
                 </p>
               </div>
             </div>

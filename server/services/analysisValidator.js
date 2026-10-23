@@ -245,8 +245,10 @@ export function validateAndEnforceAnalysis(analysisData, resumeText, jobDescript
 
     // Authoritative scores from policy
     overallReadinessScore: verifiedScore,
+    overallScore: verifiedScore,
     matchScore: verifiedScore,
     readinessLevel: verifiedReadiness,
+    readinessBand: verifiedReadiness,
     badgeColor: policyEvaluation.badgeColor,
     readyForScreening: policyEvaluation.readyForScreening,
     hasMandatoryBlocker: policyEvaluation.hasMandatoryBlocker,

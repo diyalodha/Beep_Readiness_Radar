@@ -14,7 +14,8 @@ College engineering students applying for tech internships face an acute **Actio
    - **Real Semantic LLM Analysis:** Evaluates candidate depth, evidence quality, project relevance, and adjacent skills using Google Gemini (`gemini-2.5-flash`) or an honest fallback heuristic engine.
    - **Central Threshold-Based Scoring Policy:** 5 weighted dimensions (35% Required, 25% Evidence Depth, 15% Experience, 15% Preferred, 10% Transferable) with mandatory blocker caps.
    - **Independent Validation Layer:** Mathematically recalculates scores and verifies that all quoted evidence exists verbatim in the candidate resume or job description text.
-   - **Expert-Level Adaptive Tech Quiz:** Generates multi-step scenarios and code inspection questions with zero client-side answer leakage, evaluated strictly server-side.
+   - **Expert-Level Adaptive Tech Quiz:** Generates multi-step scenarios, code inspections, and architectural edge cases grounded in the candidate's actual resume projects and detected gaps, evaluated strictly server-side with zero answer leakage.
+   - **Persistent Analyses & Quiz History:** Automatically stores resume audit records and quiz results in SQLite for candidate performance tracking.
    - **48-Hour Weekend Proof-of-Work Project:** Prescribes a deliverable specification, system architecture overview, and copyable `README.md` boilerplate.
    - **Authenticated Application Pipeline:** Backed by persistent SQLite storage with user isolation and downloadable receipts.
 
@@ -97,8 +98,9 @@ If a mandatory qualification or prerequisite skill is missing from the candidate
 
 ## 🎓 Expert-Level Adaptive Tech Quiz
 
-- **Zero Client-Side Answer Leakage:** When generating a quiz via `POST /api/quiz/generate`, the public question payload returned to the client contains **zero** correct answer indexes, rubrics, or sample answers. Secret keys are persisted in the SQLite `quiz_sessions` table.
-- **Role-Tailored Scenario Questions:** Generated dynamically for the target role (`Frontend Developer`, `Backend Developer`, etc.) and incorporates identified skill gaps from the resume audit.
+- **100% Resume-Personalized Scenarios:** When a candidate attaches their resume, questions are synthesized directly from their stated projects, libraries, and diagnosed gaps (e.g., verifying Redux state management, SQL query execution plans, or API latency trade-offs).
+- **Zero Client-Side Answer Leakage:** When generating a quiz via `POST /api/quiz/generate`, the public question payload returned to the client contains **zero** correct answer indexes, rubrics, or sample answers. Secret keys are persisted securely in the SQLite `quiz_sessions` table.
+- **Role-Tailored Scenario Questions:** Generated dynamically for the target role (`Frontend Developer`, `Backend Developer`, `Full Stack Developer`, `Data Science & ML`, `DevOps & Cloud`) and incorporates identified skill gaps from the resume audit.
 - **Multi-Format Questions:**
   - `scenario-based`: Architectural design choices under trade-off constraints.
   - `code-analysis`: Code inspection for race conditions, stale closures, or performance bottlenecks.

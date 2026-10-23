@@ -160,35 +160,35 @@ const EXPERT_ROLE_BANKS = {
     },
     {
       id: 'q_be_3',
-      category: 'Database Indexing & Query Optimization',
+      category: 'SQL Query Optimization',
       type: 'single-select',
-      scenario: 'A table with 5 million rows runs: SELECT * FROM applications WHERE user_id = 42 ORDER BY submitted_at DESC LIMIT 10;',
-      question: 'Which index structure provides the highest read performance and eliminates an in-memory sort pass (Using filesort)?',
+      scenario: 'A query running "SELECT * FROM applicants WHERE college = ? ORDER BY graduation_year DESC LIMIT 20" takes 1.4 seconds on a table of 2,000,000 rows. The table has an index on (college).',
+      question: 'Why is the query slow despite the index on "college", and what is the optimal composite index?',
       options: [
-        'Two separate single-column indexes: CREATE INDEX idx_user ON applications(user_id) and CREATE INDEX idx_date ON applications(submitted_at).',
-        'A composite B-Tree index on (user_id, submitted_at DESC).',
-        'A hash index on user_id.',
-        'A full-text index on the entire table.'
+        'The database engine cannot use indexes when LIMIT is specified.',
+        'The single index on (college) locates matching rows, but the engine must perform a slow in-memory filesort across all matching rows for "graduation_year"; creating a composite index on (college, graduation_year DESC) avoids the filesort entirely.',
+        'The table must be partitioned into 50 separate tables by state.',
+        'SQLite and PostgreSQL do not support descending column ordering.'
       ],
       correctAnswerIndex: 1,
-      explanation: 'A composite index on (user_id, submitted_at DESC) allows the database engine to perform an index seek for the user_id and immediately read rows in the pre-sorted order of submitted_at, completely avoiding an expensive in-memory filesort.',
-      knowledgeGap: 'Composite B-Tree index ordering, index seek vs filesort, and covering indexes.'
+      explanation: 'A single index on (college) satisfies the WHERE predicate, but requires an unindexed disk/memory filesort for the ORDER BY clause. A composite index (college, graduation_year DESC) allows the B-tree to be traversed directly in sort order.',
+      knowledgeGap: 'Composite B-tree indexing, filesort elimination, and index-covered query optimization.'
     },
     {
       id: 'q_be_4',
-      category: 'Distributed Caching & Cache Invalidation',
+      category: 'Distributed Caching & Redis',
       type: 'multi-select',
-      scenario: 'A backend team uses Redis as a write-around cache in front of a PostgreSQL database.',
-      question: 'Which issues can arise when cache invalidation fails during heavy traffic? (Select all that apply)',
+      scenario: 'You are deploying a Redis cache in front of a relational database for student profile lookups. Under a flash surge of traffic, multiple cache keys expire at the exact same second.',
+      question: 'Which of the following phenomena and architectural mitigations apply to this scenario? (Select all that apply)',
       options: [
-        'Cache stampede / thundering herd when a hot key expires and hundreds of worker threads hit the database simultaneously.',
-        'Data inconsistency where clients read stale cached records after a database update.',
-        'Automatic corruption of PostgreSQL WAL logs.',
-        'Cascading database connection pool exhaustion.'
+        'This creates a "Cache Stampede" (thundering herd) where thousands of requests bypass the cache and overwhelm the primary database.',
+        'Adding random jitter (TTL = baseTTL + random(0, 300s)) smooths out expiration waves.',
+        'Using a distributed mutex lock (e.g. Redlock) ensures only one worker thread recomputes the expired key while others wait or serve stale cache.',
+        'Setting TTL to -1 guarantees that Redis will automatically shard across CPU cores.'
       ],
-      correctAnswerIndices: [0, 1, 3],
-      explanation: 'When hot cache keys expire without mutex locks or probabilistic early expiration, hundreds of threads query the database simultaneously (thundering herd), saturating connection pools and serving inconsistent stale state.',
-      knowledgeGap: 'Cache stampede mitigation, mutex locking on cache miss, and cache-aside consistency.'
+      correctAnswerIndices: [0, 1, 2],
+      explanation: 'When hot cache keys expire simultaneously without jitter or mutex locks, concurrent requests flood the database (Cache Stampede). Random TTL jitter and mutex locking on miss are primary industry defenses.',
+      knowledgeGap: 'Cache stampede mitigation, TTL jittering, and mutex locking on cache miss.'
     },
     {
       id: 'q_be_5',
@@ -207,32 +207,122 @@ const EXPERT_ROLE_BANKS = {
       sampleAnswer: 'The Circuit Breaker pattern monitors upstream failure and latency rates. When failures cross a predefined threshold, the breaker transitions from CLOSED to OPEN, immediately short-circuiting downstream requests with a fallback response rather than blocking worker threads for 15 seconds. After a cooldown, it enters HALF-OPEN to test upstream recovery before safely closing.',
       knowledgeGap: 'Cascading failure prevention, thread pool starvation, and circuit breaker states.'
     }
+  ],
+
+  data: [
+    {
+      id: 'q_da_1',
+      category: 'SQL Analytical Querying & Window Functions',
+      type: 'scenario-based',
+      scenario: 'You are analyzing candidate application retention. You need to calculate the running 7-day cumulative count of applications per university without collapsing individual applicant records.',
+      question: 'Which SQL window construct achieves this correctly and efficiently?',
+      options: [
+        'Use GROUP BY university, application_date with a self-join on date <= date.',
+        'Use COUNT(*) OVER (PARTITION BY university ORDER BY application_date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW).',
+        'Window functions cannot be combined with PARTITION BY in modern SQL engines.',
+        'Export the raw table to CSV and compute rolling sums in Microsoft Excel.'
+      ],
+      correctAnswerIndex: 1,
+      explanation: 'OVER (PARTITION BY university ORDER BY application_date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) defines a rolling 7-row analytical window partitioned per university without collapsing records.',
+      knowledgeGap: 'SQL window frame specifications (ROWS BETWEEN) vs GROUP BY aggregations.'
+    },
+    {
+      id: 'q_da_2',
+      category: 'Data Manipulation & Vectorization in Pandas',
+      type: 'code-analysis',
+      scenario: 'A data pipeline calculates applicant percentiles across 500,000 student records using Python Pandas.',
+      codeSnippet: `for index, row in df.iterrows():
+  df.at[index, 'adjusted_score'] = (row['raw_score'] - mean_val) / std_val`,
+      question: 'Why does this code run slowly, and what is the optimal vectorized implementation?',
+      options: [
+        'iterrows() is slow because Python lacks multi-core support; rewrite the loop in Bash.',
+        'iterrows() generates a Pandas Series object for each of the 500,000 rows with massive overhead; use vectorized NumPy broadcasting: df["adjusted_score"] = (df["raw_score"] - mean_val) / std_val.',
+        'The loop is slow because adjusted_score is a reserved SQL keyword.',
+        'Pandas requires calling gc.collect() inside every iteration of the loop.'
+      ],
+      correctAnswerIndex: 1,
+      explanation: 'Iterating row-by-row in Python incurs heavy interpreter and Series conversion overhead. Vectorized operations execute contiguous memory arrays directly in compiled C/NumPy code, running orders of magnitude faster.',
+      knowledgeGap: 'Pandas row-iteration anti-patterns vs vectorized NumPy memory broadcasting.'
+    },
+    {
+      id: 'q_da_3',
+      category: 'A/B Testing & Statistical Rigor',
+      type: 'single-select',
+      scenario: 'A product team runs an A/B test on a candidate apply button. After 3 days, p-value reaches 0.03 (alpha = 0.05). The team decides to stop the experiment early and declare the variant a winner.',
+      question: 'What statistical pitfall does this early stopping introduce?',
+      options: [
+        'Survivorship bias.',
+        'The Peeking Problem (Type I error inflation): repeatedly checking p-values before reaching the predetermined minimum sample size dramatically inflates false-positive rates.',
+        'Multicollinearity between user sessions.',
+        'Simpson’s Paradox caused by lack of database indexes.'
+      ],
+      correctAnswerIndex: 1,
+      explanation: 'Continuous monitoring ("peeking") without statistical correction causes random short-term fluctuations to cross the significance threshold, leading to false-positive conclusions (inflated Type I error). Sample sizes must be fixed a priori.',
+      knowledgeGap: 'A/B testing sample size power calculations and the peeking problem.'
+    },
+    {
+      id: 'q_da_4',
+      category: 'Data Warehousing & Star Schema',
+      type: 'multi-select',
+      scenario: 'You are modeling an enterprise placement analytics data warehouse in Snowflake/BigQuery.',
+      question: 'Which of the following dimensional modeling principles apply to fact and dimension tables? (Select all that apply)',
+      options: [
+        'Fact tables contain additive or semi-additive numerical metrics (e.g. applications_count, salary_stipend).',
+        'Dimension tables provide descriptive context and filters (e.g. candidate demographics, university metadata, company details).',
+        'Fact tables should never contain foreign keys referencing dimension tables.',
+        'Surrogate keys in dimension tables isolate the data warehouse from operational source system changes.'
+      ],
+      correctAnswerIndices: [0, 1, 3],
+      explanation: 'In dimensional modeling (Kimball), fact tables capture quantifiable business measurements and foreign keys linking to descriptive dimension tables. Surrogate keys insulate against upstream operational schema changes.',
+      knowledgeGap: 'Dimensional modeling, Fact vs Dimension boundaries, and surrogate key isolation.'
+    },
+    {
+      id: 'q_da_5',
+      category: 'Data Quality & Anomaly Detection',
+      type: 'short-answer',
+      scenario: 'You discover that an automated applicant tracking pipeline ingested corrupted salary figures where 5% of records have an extra zero appended.',
+      question: 'Describe an anomaly detection technique to detect and isolate these outliers, and explain why median is preferable to mean in this context.',
+      rubric: {
+        keywords: ['median', 'mean', 'outlier', 'iqr', 'z-score', 'robust', 'skew'],
+        passingConcepts: [
+          'Mean is heavily skewed by extreme outliers whereas median is robust (breakdown point of 50%)',
+          'Use Interquartile Range (IQR) or Z-score thresholds to detect values exceeding normal distributions'
+        ]
+      },
+      sampleAnswer: 'Extreme order-of-magnitude anomalies heavily distort the arithmetic mean, whereas the median remains robust because it reflects the 50th percentile. An anomaly detection pipeline using Interquartile Range (IQR, flagging values beyond Q3 + 1.5*IQR) or modified Z-scores based on Median Absolute Deviation (MAD) can isolate these corrupted records without being skewed by the outliers themselves.',
+      knowledgeGap: 'Robust statistics (mean vs median sensitivity) and IQR/MAD outlier detection.'
+    }
   ]
 };
 
 /**
  * Builds the expert quiz generation prompt for Google Gemini.
  */
-function buildQuizPrompt(targetRole, jobDescription, skillGaps = [], difficulty = 'expert', questionCount = 5) {
-  const wrappedJd = wrapUntrustedDocument('job_description_data', jobDescription);
+function buildQuizPrompt(targetRole, jobDescription, skillGaps = [], difficulty = 'expert', questionCount = 5, resumeText = '') {
+  const wrappedJd = jobDescription ? wrapUntrustedDocument('job_description_data', jobDescription) : '';
+  const wrappedResume = resumeText ? wrapUntrustedDocument('candidate_resume_data', resumeText) : '';
   const gapsList = Array.isArray(skillGaps) && skillGaps.length > 0
-    ? skillGaps.map(g => (typeof g === 'string' ? g : g.missingCompetency || g.skill || '')).filter(Boolean).join(', ')
+    ? skillGaps.map(g => (typeof g === 'string' ? g : g.missingCompetency || g.skillOrCompetency || g.skill || '')).filter(Boolean).join(', ')
     : 'System architecture, API idempotency, database indexing, edge case debugging, state concurrency';
 
   return `
-You are the Principal Technical Evaluator designing an EXPERT-LEVEL technical assessment for candidates applying for:
-Role: "${targetRole || 'Software Engineering Intern'}"
+You are the Principal Technical Evaluator designing an EXPERT-LEVEL, DEEPLY PERSONALIZED technical assessment for this candidate.
+
+Target Role: "${targetRole || 'Software Engineering Intern'}"
 Target Gaps / Required Domains: ${gapsList}
 Difficulty Level: "${difficulty}" (Focus strictly on application, multi-step engineering reasoning, debugging, design trade-offs, and failure mode analysis. DO NOT generate basic recall or trivial terminology questions).
 
+${wrappedResume}
+
 ${wrappedJd}
 
-Generate exactly ${questionCount} expert technical questions testing practical engineering judgment.
-Include a mixture of:
-1. Scenario-based architectural questions
-2. Code analysis / bug diagnosis questions (with realistic snippets)
-3. Concurrency / database trade-off questions
-4. Exactly one high-yield short-answer question testing architectural trade-off reasoning
+CORE PERSONALIZATION DIRECTIVES:
+1. Ground the assessment directly in the candidate's actual projects, libraries, databases, and frameworks mentioned in their resume (in <candidate_resume_data>). For example, if their resume mentions building an analytics dashboard with React and PostgreSQL, or an e-commerce API in Django/Node, set the scenarios and code analysis around those specific technologies and architectural challenges.
+2. Directly evaluate the specific skill gaps between the candidate's resume and the job description requirements in <job_description_data>.
+3. Include realistic code snippets for code-analysis questions that test debugging subtle concurrency issues, stale closures, memory leaks, or database isolation anomalies.
+4. Exactly one question must be a high-yield short-answer question evaluating trade-off analysis.
+
+Generate exactly ${questionCount} expert technical questions.
 
 CRITICAL INSTRUCTIONS:
 - Distractors must represent plausible, commonly held engineering misconceptions.
@@ -249,7 +339,7 @@ Respond strictly in valid JSON matching this structure:
       "id": "q_1",
       "category": "Domain Category",
       "type": "single-select | multi-select | code-analysis | scenario-based | short-answer",
-      "scenario": "Realistic background context or setup",
+      "scenario": "Realistic background context or setup reflecting candidate background or role",
       "codeSnippet": "Optional code block (or empty string)",
       "question": "Clear, deep technical question",
       "options": [
@@ -314,8 +404,9 @@ function validateQuestionItem(q, idx) {
  * @param {Array} params.skillGaps
  * @param {string} params.difficulty - 'expert' | 'advanced' | 'intermediate'
  * @param {number} params.questionCount - default 5
+ * @param {string} params.resumeText - optional candidate resume text for deep personalization
  * @param {string} params.userId - optional authenticated user ID
- * @returns {Promise<{ sessionId: string, difficulty: string, targetRole: string, questions: Array, disclaimer: string }>}
+ * @returns {Promise<{ sessionId: string, difficulty: string, targetRole: string, questions: Array, disclaimer: string, isPersonalized: boolean, isAIGenerated: boolean, engine: string }>}
  */
 export async function generateExpertQuiz({
   targetRole = 'Software Engineering Intern',
@@ -323,27 +414,46 @@ export async function generateExpertQuiz({
   skillGaps = [],
   difficulty = 'expert',
   questionCount = 5,
+  resumeText = '',
   userId = null
 }) {
   let questionsPool = [];
-  const roleLower = (targetRole || '').toLowerCase();
-  const isBackendRole = roleLower.includes('backend') || roleLower.includes('data') || roleLower.includes('fullstack') || roleLower.includes('python') || roleLower.includes('node');
-  const fallbackBank = isBackendRole ? EXPERT_ROLE_BANKS.backend : EXPERT_ROLE_BANKS.frontend;
+  let isAIGenerated = false;
 
-  // Attempt live generation via Gemini if configured
-  if (isGeminiConfigured() && jobDescription.trim().length >= 20) {
+  const roleLower = (targetRole || '').toLowerCase();
+  const resumeLower = (resumeText || '').toLowerCase();
+
+  // Role bank selection for fallback
+  let fallbackBank = EXPERT_ROLE_BANKS.frontend;
+  if (roleLower.includes('data') || roleLower.includes('analytics') || roleLower.includes('analyst')) {
+    fallbackBank = EXPERT_ROLE_BANKS.data;
+  } else if (roleLower.includes('backend') || roleLower.includes('python') || roleLower.includes('node') || resumeLower.includes('django') || resumeLower.includes('fastapi')) {
+    fallbackBank = EXPERT_ROLE_BANKS.backend;
+  } else if (roleLower.includes('fullstack') || roleLower.includes('full stack')) {
+    fallbackBank = EXPERT_ROLE_BANKS.backend;
+  }
+
+  // Attempt live personalization via Gemini if configured
+  const hasContentForAi = isGeminiConfigured() && (
+    (typeof resumeText === 'string' && resumeText.trim().length >= 20) ||
+    (typeof jobDescription === 'string' && jobDescription.trim().length >= 20) ||
+    Boolean(targetRole)
+  );
+
+  if (hasContentForAi) {
     try {
-      const prompt = buildQuizPrompt(targetRole, jobDescription, skillGaps, difficulty, questionCount);
-      const { parsedJson } = await callGeminiStructured(prompt, { temperature: 0.2 });
+      const prompt = buildQuizPrompt(targetRole, jobDescription, skillGaps, difficulty, questionCount, resumeText);
+      const { parsedJson } = await callGeminiStructured(prompt, { temperature: 0.3 });
 
       if (parsedJson && Array.isArray(parsedJson.questions) && parsedJson.questions.length >= 3) {
         const valid = parsedJson.questions.filter((q, idx) => validateQuestionItem(q, idx));
         if (valid.length >= 3) {
           questionsPool = valid.slice(0, questionCount);
+          isAIGenerated = true;
         }
       }
     } catch (err) {
-      console.warn('[Quiz Service] Gemini quiz generation failed, falling back to expert bank:', err.message);
+      console.warn('[Quiz Service] Gemini personalized quiz generation error, using role fallback:', err.message);
     }
   }
 
@@ -392,10 +502,17 @@ export async function generateExpertQuiz({
     answerKeys: privateAnswerKeys,
   });
 
+  const isPersonalized = Boolean(resumeText && resumeText.trim().length >= 20);
+
   return {
     sessionId,
     difficulty,
     targetRole,
+    isPersonalized,
+    isAIGenerated,
+    engine: isAIGenerated 
+      ? (isPersonalized ? 'Gemini 2.5 Flash (Personalized Resume Quiz)' : 'Gemini 2.5 Flash (Role Scenario Quiz)')
+      : 'Adaptive Role Engine (Curated Technical Bank)',
     questionCount: publicQuestions.length,
     questions: publicQuestions,
     disclaimer: PRACTICE_DISCLAIMER,
@@ -448,38 +565,36 @@ export async function gradeQuizSession(sessionId, userAnswers = {}, _userId = nu
         earnedPoints = 100;
         feedback = 'All correct options selected.';
       } else {
-        // Partial credit calculation
-        const correctSet = new Set(correctArr);
-        let matches = 0;
-        for (const item of studentArr) {
-          if (correctSet.has(item)) matches++;
-        }
-        earnedPoints = Math.max(0, Math.round((matches / Math.max(1, correctArr.length)) * 100) - ((studentArr.length - matches) * 20));
-        isCorrect = earnedPoints >= 80;
-        feedback = `Partial selection. Correct choices were: ${correctArr.map(idx => `Option ${idx + 1}`).join(', ')}.`;
+        const intersection = studentArr.filter(x => correctArr.includes(x));
+        const partial = Math.round((intersection.length / correctArr.length) * 50);
+        earnedPoints = partial;
+        feedback = `Partial match. Selected ${intersection.length} of ${correctArr.length} required options.`;
       }
     } else if (key.type === 'short-answer') {
-      // Short answer evaluation
-      const studentText = typeof studentAns === 'string' ? studentAns.trim() : '';
-      if (!studentText || studentText.length < 15) {
-        earnedPoints = 15;
-        isCorrect = false;
+      // Evaluate short answer against rubric keywords and length
+      const text = String(studentAns || '').trim().toLowerCase();
+      if (!text || text.length < 15) {
+        earnedPoints = 0;
         feedback = 'Response was too brief to demonstrate architectural trade-off understanding.';
       } else {
-        // Concept evaluation based on keywords and concepts
-        const keywords = key.rubric?.keywords || ['fcp', 'tti', 'server', 'client', 'latency'];
-        const matchedKeywords = keywords.filter(k => studentText.toLowerCase().includes(k.toLowerCase()));
-        const keywordScore = Math.min(60, (matchedKeywords.length / Math.max(1, keywords.length)) * 60);
-        const lengthScore = Math.min(40, (studentText.length / 250) * 40);
-
-        earnedPoints = Math.round(keywordScore + lengthScore);
+        const rubricKeywords = key.rubric?.keywords || ['trade-off', 'performance', 'latency', 'architecture'];
+        const matchedKeywords = rubricKeywords.filter(k => text.includes(k.toLowerCase()));
+        const keywordScore = Math.min(60, matchedKeywords.length * 20);
+        const lengthScore = Math.min(40, Math.round((text.length / 100) * 40));
+        earnedPoints = Math.min(100, keywordScore + lengthScore);
         isCorrect = earnedPoints >= 65;
-        feedback = `Architectural analysis addressed ${matchedKeywords.length} of ${keywords.length} core concepts.`;
+        feedback = isCorrect
+          ? `Strong response addressing key architectural dimensions (${matchedKeywords.join(', ') || 'demonstrated'}).`
+          : 'Response lacks key engineering criteria (see sample answer below).';
       }
     }
 
     if (!isCorrect && key.knowledgeGap) {
-      knowledgeGapsIdentified.push(key.knowledgeGap);
+      knowledgeGapsIdentified.push({
+        questionId: q.id,
+        category: q.category,
+        gap: key.knowledgeGap,
+      });
     }
 
     totalScoreSum += earnedPoints;
@@ -487,26 +602,28 @@ export async function gradeQuizSession(sessionId, userAnswers = {}, _userId = nu
     questionEvaluations.push({
       id: q.id,
       category: q.category,
-      type: key.type,
+      type: q.type,
       question: q.question,
-      options: q.options,
-      userAnswer: studentAns !== undefined ? studentAns : null,
-      correctAnswerIndex: key.correctAnswerIndex,
-      correctAnswerIndices: key.correctAnswerIndices,
-      sampleAnswer: key.sampleAnswer,
+      codeSnippet: q.codeSnippet || null,
+      scenario: q.scenario || null,
+      studentAnswer: studentAns,
       isCorrect,
       earnedPoints,
-      feedback,
+      correctAnswer: key.correctAnswerIndex,
+      correctAnswerIndices: key.correctAnswerIndices,
+      sampleAnswer: key.sampleAnswer,
       explanation: key.explanation,
       knowledgeGap: key.knowledgeGap,
+      feedback,
     });
   }
 
-  const finalScore = Math.round(totalScoreSum / Math.max(1, questionEvaluations.length));
+  const finalScore = publicQuestions.length > 0 ? Math.round(totalScoreSum / publicQuestions.length) : 0;
+  const correctCount = questionEvaluations.filter(e => e.isCorrect).length;
 
-  // Save completion state to database
+  // Record completion in database
   quizQueries.completeSession(sessionId, {
-    userAnswers,
+    userAnswers: JSON.stringify(userAnswers),
     score: finalScore,
   });
 
@@ -515,9 +632,18 @@ export async function gradeQuizSession(sessionId, userAnswers = {}, _userId = nu
     targetRole: session.target_role,
     difficulty: session.difficulty,
     overallScore: finalScore,
+    scorePercent: finalScore,
+    correctCount,
+    totalQuestions: publicQuestions.length,
     passed: finalScore >= 70,
+    readinessTier: finalScore >= 85 
+      ? 'Strong Candidate Readiness' 
+      : (finalScore >= 70 ? 'Good Alignment with Specific Gaps' : 'Needs Practice On Core Trade-Offs'),
     evaluations: questionEvaluations,
-    knowledgeGapsIdentified: Array.from(new Set(knowledgeGapsIdentified)),
+    questionEvaluations: questionEvaluations,
+    knowledgeGapsIdentified: knowledgeGapsIdentified.length > 0 ? knowledgeGapsIdentified : [
+      { category: session.target_role, gap: 'Continue sharpening edge-case handling, system trade-offs, and latency optimization.' }
+    ],
     disclaimer: PRACTICE_DISCLAIMER,
     evaluatedAt: new Date().toISOString(),
   };

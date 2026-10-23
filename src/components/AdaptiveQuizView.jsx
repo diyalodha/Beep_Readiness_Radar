@@ -11,7 +11,11 @@ export default function AdaptiveQuizView({
   targetRole = 'Frontend Developer', 
   customJd = '', 
   detectedGaps = [], 
+  resumeText = '',
+  fileName = '',
+  _result = null,
   token = '',
+  onNavigateToMatcher = null,
   onCompleteQuiz 
 }) {
   const isDark = theme === 'dark';
@@ -23,6 +27,13 @@ export default function AdaptiveQuizView({
     setPrevTargetRole(targetRole);
     setRole(targetRole || 'Frontend Developer');
   }
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGrading, setIsGrading] = useState(false);
+  const [quizSession, setQuizSession] = useState(null);
+  const [userAnswers, setUserAnswers] = useState({});
+  const [gradedResult, setGradedResult] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Fetch or generate a quiz session from the server
   const generateQuiz = useCallback(async (selectedDifficulty = difficulty, selectedRole = role) => {
@@ -41,10 +52,16 @@ export default function AdaptiveQuizView({
         method: 'POST',
         headers,
         body: JSON.stringify({
+          targetRole: selectedRole,
           role: selectedRole,
           difficulty: selectedDifficulty,
+          jobDescription: customJd || '',
           customJd: customJd || '',
-          detectedGaps: Array.isArray(detectedGaps) ? detectedGaps : []
+          skillGaps: Array.isArray(detectedGaps) ? detectedGaps : [],
+          detectedGaps: Array.isArray(detectedGaps) ? detectedGaps : [],
+          resumeText: resumeText || '',
+          studentSkills: resumeText || '',
+          questionCount: 5
         })
       });
 
@@ -59,12 +76,17 @@ export default function AdaptiveQuizView({
     } finally {
       setIsLoading(false);
     }
-  }, [difficulty, role, customJd, detectedGaps, token]);
+  }, [difficulty, role, customJd, detectedGaps, resumeText, token]);
 
   // Initial asynchronous load on mount or role change
   useEffect(() => {
     let ignore = false;
     const fetchInitialQuiz = async () => {
+      setIsLoading(true);
+      setErrorMessage('');
+      setGradedResult(null);
+      setUserAnswers({});
+
       try {
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -72,24 +94,35 @@ export default function AdaptiveQuizView({
           method: 'POST',
           headers,
           body: JSON.stringify({
+            targetRole: role,
             role,
             difficulty,
+            jobDescription: customJd || '',
             customJd: customJd || '',
-            detectedGaps: Array.isArray(detectedGaps) ? detectedGaps : []
+            skillGaps: Array.isArray(detectedGaps) ? detectedGaps : [],
+            detectedGaps: Array.isArray(detectedGaps) ? detectedGaps : [],
+            resumeText: resumeText || '',
+            studentSkills: resumeText || '',
+            questionCount: 5
           })
         });
         const data = await res.json();
         if (!ignore) {
-          if (res.ok) setQuizSession(data);
-          else setErrorMessage(data.error || 'Failed to generate technical assessment.');
+          if (res.ok) {
+            setQuizSession(data);
+          } else {
+            setErrorMessage(data.error || 'Failed to generate technical assessment.');
+          }
         }
       } catch (err) {
         if (!ignore) setErrorMessage(err.message || 'Unable to connect to quiz service.');
+      } finally {
+        if (!ignore) setIsLoading(false);
       }
     };
     fetchInitialQuiz();
     return () => { ignore = true; };
-  }, [difficulty, role, customJd, detectedGaps, token]);
+  }, [difficulty, role, customJd, detectedGaps, resumeText, token]);
 
   // Handle single-select or code-analysis choice
   const handleSingleSelect = (questionId, optionIdx) => {
@@ -142,6 +175,7 @@ export default function AdaptiveQuizView({
         headers,
         body: JSON.stringify({
           sessionId: quizSession.sessionId,
+          userAnswers,
           answers: userAnswers
         })
       });
@@ -153,7 +187,7 @@ export default function AdaptiveQuizView({
 
       setGradedResult(data);
       if (onCompleteQuiz && typeof onCompleteQuiz === 'function') {
-        onCompleteQuiz(data.scorePercent);
+        onCompleteQuiz(data.scorePercent || data.overallScore);
       }
 
       // Scroll smoothly to results
@@ -261,6 +295,50 @@ export default function AdaptiveQuizView({
             </button>
           </div>
         </div>
+
+        {/* Personalization Status Banner */}
+        {resumeText && resumeText.trim() ? (
+          <div className={`mt-4 p-3.5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
+            isDark ? 'bg-emerald-950/25 border-emerald-500/40 text-emerald-200' : 'bg-emerald-50 border-emerald-300 text-emerald-900 shadow-2xs'
+          }`}>
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <div>
+                <span className="font-extrabold mr-1">100% Resume-Personalized:</span>
+                <span className="font-medium">
+                  Questions are generated by AI directly from {fileName || 'your attached resume'} projects & diagnosed skill gaps.
+                </span>
+              </div>
+            </div>
+            {quizSession?.engine && (
+              <span className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border shrink-0 self-start sm:self-auto ${
+                isDark ? 'bg-slate-900 border-emerald-500/30 text-emerald-300' : 'bg-white border-emerald-300 text-emerald-800'
+              }`}>
+                {quizSession.engine}
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className={`mt-4 p-3.5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
+            isDark ? 'bg-purple-950/20 border-purple-800/40 text-slate-300' : 'bg-purple-50/60 border-purple-200 text-slate-700'
+          }`}>
+            <div className="flex items-start sm:items-center gap-2">
+              <Sparkles className="w-4 h-4 text-purple-500 shrink-0 mt-0.5 sm:mt-0" />
+              <span>
+                <strong>Practicing on target role scenarios:</strong> To generate questions grounded in your specific resume projects, attach your resume on JD Matcher.
+              </span>
+            </div>
+            {onNavigateToMatcher && (
+              <button
+                type="button"
+                onClick={onNavigateToMatcher}
+                className="text-[11px] font-bold px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white shrink-0 shadow-xs transition cursor-pointer self-start sm:self-auto"
+              >
+                Attach Resume in JD Matcher
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Detected Gaps Bridge Notice */}
         {detectedGaps && detectedGaps.length > 0 && (
@@ -406,7 +484,7 @@ export default function AdaptiveQuizView({
       {!isLoading && quizSession?.questions && quizSession.questions.length > 0 && (
         <div className="space-y-5">
           {quizSession.questions.map((q, qIdx) => {
-            const evaluation = gradedResult?.questionEvaluations?.find(e => e.id === q.id);
+            const evaluation = (gradedResult?.questionEvaluations || gradedResult?.evaluations)?.find(e => e.id === q.id);
             const isQuestionCorrect = evaluation?.isCorrect;
             const currentAnswer = userAnswers[q.id];
 

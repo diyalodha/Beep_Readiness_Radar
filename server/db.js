@@ -78,6 +78,24 @@ const initSchemaTransaction = db.transaction(() => {
     );
 
     CREATE INDEX IF NOT EXISTS idx_quiz_sessions_user_id ON quiz_sessions(user_id);
+
+    CREATE TABLE IF NOT EXISTS analyses (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      user_email TEXT,
+      target_role TEXT NOT NULL,
+      company_name TEXT NOT NULL,
+      overall_score INTEGER,
+      readiness_band TEXT,
+      is_ai_generated INTEGER DEFAULT 0,
+      engine TEXT,
+      analysis_data TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_analyses_user_id ON analyses(user_id);
+    CREATE INDEX IF NOT EXISTS idx_analyses_created_at ON analyses(created_at);
   `);
 
   // Record migrations
@@ -89,6 +107,11 @@ const initSchemaTransaction = db.transaction(() => {
   const hasQuiz = db.prepare('SELECT 1 FROM _migrations WHERE name = ?').get('002_quiz_sessions_schema');
   if (!hasQuiz) {
     db.prepare('INSERT INTO _migrations (name, applied_at) VALUES (?, ?)').run('002_quiz_sessions_schema', new Date().toISOString());
+  }
+
+  const hasAnalyses = db.prepare('SELECT 1 FROM _migrations WHERE name = ?').get('003_analyses_schema');
+  if (!hasAnalyses) {
+    db.prepare('INSERT INTO _migrations (name, applied_at) VALUES (?, ?)').run('003_analyses_schema', new Date().toISOString());
   }
 });
 
@@ -234,6 +257,46 @@ export const quizQueries = {
   listByUserId(userId) {
     if (!userId) return [];
     return db.prepare('SELECT id, target_role, difficulty, score, status, created_at, completed_at FROM quiz_sessions WHERE user_id = ? ORDER BY created_at DESC').all(userId);
+  }
+};
+
+// --- Exported Resume Analysis Queries ---
+export const analysisQueries = {
+  createAnalysis({ id, userId, userEmail, targetRole, companyName, overallScore, readinessBand, isAIGenerated, engine, analysisData }) {
+    const recordId = id || 'aud_' + crypto.randomUUID();
+    const now = new Date().toISOString();
+    db.prepare(`
+      INSERT INTO analyses (id, user_id, user_email, target_role, company_name, overall_score, readiness_band, is_ai_generated, engine, analysis_data, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      recordId,
+      userId || null,
+      userEmail ? userEmail.trim().toLowerCase() : null,
+      (targetRole || 'Internship Candidate').trim(),
+      (companyName || 'Target Company').trim(),
+      typeof overallScore === 'number' ? overallScore : null,
+      readinessBand || null,
+      isAIGenerated ? 1 : 0,
+      engine || 'Dynamic Engine',
+      typeof analysisData === 'string' ? analysisData : JSON.stringify(analysisData),
+      now
+    );
+    return this.findById(recordId);
+  },
+
+  findById(id) {
+    if (!id) return null;
+    return db.prepare('SELECT * FROM analyses WHERE id = ?').get(id);
+  },
+
+  listByUserId(userId, limit = 20) {
+    if (!userId) return [];
+    return db.prepare('SELECT id, user_id, target_role, company_name, overall_score, readiness_band, is_ai_generated, engine, created_at FROM analyses WHERE user_id = ? ORDER BY created_at DESC LIMIT ?').all(userId, limit);
+  },
+
+  getLatestByUserId(userId) {
+    if (!userId) return null;
+    return db.prepare('SELECT * FROM analyses WHERE user_id = ? ORDER BY created_at DESC LIMIT 1').get(userId);
   }
 };
 

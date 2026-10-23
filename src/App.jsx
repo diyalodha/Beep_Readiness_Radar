@@ -301,8 +301,8 @@ export default function App() {
     const company = isCustomJob ? 'Custom Partner' : selectedInternship?.company;
 
     if (!resumeText.trim()) {
-      setErrorMessage('Please attach or paste a resume before auditing.');
-      setActiveTab('resume');
+      setErrorMessage('Please attach or select a candidate resume below before auditing.');
+      matcherFileInputRef.current?.click();
       return;
     }
 
@@ -693,10 +693,14 @@ export default function App() {
         {activeTab === 'quiz' && (
           <AdaptiveQuizView
             theme={theme}
-            targetRole={isCustomJob ? (customRoleTitle || 'Software Engineer') : (selectedInternship?.role || 'Frontend Developer')}
+            targetRole={isCustomJob ? (customRoleTitle || 'Software Engineer') : (selectedInternship?.title || selectedInternship?.role || 'Frontend Developer')}
             customJd={isCustomJob ? customJd : (selectedInternship?.description || (selectedInternship?.requirements ? selectedInternship.requirements.join(' ') : ''))}
             detectedGaps={result?.criticalSkillGaps?.map(g => g.skillOrCompetency) || []}
+            resumeText={resumeText}
+            fileName={fileName}
+            result={result}
             token={token}
+            onNavigateToMatcher={() => setActiveTab('matcher')}
             onCompleteQuiz={(quizScore) => {
               console.log('Quiz completed with score:', quizScore);
             }}
@@ -784,7 +788,7 @@ export default function App() {
       }`}>
         <div className="max-w-4xl mx-auto px-4 space-y-2">
           <p className={`font-extrabold text-sm ${isDark ? 'text-white' : 'text-slate-950'}`}>
-            EventBeep Founder’s Office • Internship Readiness Radar
+            EventBeep Founder’s Office • Beep Readiness Radar
           </p>
           <p className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             Closing the student Actionability Gap with transparent skill diagnostics, weekend proof-of-work project blueprints, and authenticated application tracking.
