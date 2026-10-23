@@ -38,28 +38,45 @@ After reviewing the Beep app ([Android](https://play.google.com/store/apps/detai
 ## 📈 The 7-Day Metric: Measuring Real Student Progress
 
 ### Primary Metric
-**Average improvement in technical assessment scores**
 
-- **Baseline:** Each participating student's score on an initial assessment.
-- **Target:** An average improvement of at least 15 percentage points after seven days of using the personalized preparation plan.
-- **Status:** This is a proposed target, not a measured result.
+**Average improvement in technical assessment scores after seven days of personalized preparation.**
+
+- **Baseline:** Each participating student's score on an initial technical assessment relevant to their target internship role.
+- **Target:** An average improvement of at least **15 percentage points within seven days**. For example, an increase from 60% to 75% meets the target.
+- **Status:** This is a proposed target, not a measured or proven result.
 
 ### Seven-Day Experiment
 
-1. **Day 1 — Baseline:** Recruit 5–10 students preparing for internships. Record their target roles and initial assessment scores.
-2. **Days 2–5 — Preparation:** Generate individualized skill-gap reports and preparation plans. Ask students to complete the recommended activities and record completion.
-3. **Day 6 — Practice:** Have students complete a follow-up assessment covering comparable topics at a similar difficulty level.
-4. **Day 7 — Measurement:** Calculate each student's score change, average improvement, and preparation-plan completion rate.
+**Day 1 — Establish the Baseline**  
+Recruit 5–10 students preparing for internships. Record their target roles and initial technical assessment scores.
+
+**Days 2–5 — Personalized Preparation**  
+Use Beep Readiness Radar to generate individual readiness reports, identify skill gaps, and create personalized preparation plans. Ask students to complete the recommended activities and record their progress.
+
+**Day 6 — Follow-Up Assessment**  
+Give participants a second assessment covering comparable topics at a similar difficulty level, using different questions to reduce the effect of memorization.
+
+**Day 7 — Measure the Outcome**  
+Calculate the change in each participant's score, the average improvement across participants who completed both assessments, and the preparation-plan completion rate.
 
 ### Measurement Formula
 
-Average score improvement = average follow-up score − average baseline score.
+**Average score improvement = Average follow-up score − Average baseline score**
 
-Report the number of participants, initial and follow-up averages, completion rate, and actual improvement. If the target is not achieved, report the result honestly and investigate why.
+For example, if the average baseline score is 55% and the average follow-up score is 72%, the improvement is **17 percentage points**.
 
-**Longer-term outcome:** Track internship applications and interview callbacks over a longer period. Do not claim a callback-rate improvement until sufficient real application data has been collected.
+Report:
+- Number of students recruited and number who completed both assessments.
+- Average baseline and follow-up scores.
+- Actual average improvement in percentage points.
+- Preparation-plan completion rate.
+- Whether the 15-percentage-point target was achieved.
 
----
+If participants do not complete the follow-up assessment, report their number separately and calculate score improvement only for students with both scores. Report actual results honestly, even if the target is not achieved.
+
+### Longer-Term Outcome
+
+Track internship applications, interview invitations, and callbacks over a longer period to explore whether improved readiness translates into better application outcomes. Do not claim an increase in interview callbacks until sufficient real-world data has been collected.
 
 ## 🛠️ System Architecture & Services
 
