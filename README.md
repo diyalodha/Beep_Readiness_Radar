@@ -23,17 +23,16 @@ After reviewing the Beep app ([Android](https://play.google.com/store/apps/detai
 
 ## 💡 The Solution: Beep Readiness Radar
 
-**Beep Readiness Radar** turns rejection anxiety into structured career momentum through:
+**Beep Readiness Radar** helps students turn internship uncertainty into a structured, actionable preparation plan.
 
-* **Real Semantic LLM Analysis:** Evaluates candidate depth, evidence quality, project relevance, and adjacent skills using Google Gemini (`gemini-2.5-flash`) via the official `@google/genai` SDK, backed by a dual-engine transparent heuristic fallback.
-* **Central Threshold-Based Scoring Policy:** 5 weighted dimensions (35% Required, 25% Evidence Depth, 15% Experience, 15% Preferred, 10% Transferable) with mandatory blocker caps.
-* **Independent Grounding Verification Layer:** Mathematically recalculates scores and verifies that all quoted evidence exists verbatim in the candidate resume or job description text.
-* **100% Resume-Personalized 48-Hour Weekend Project Blueprint:** Recommends a targeted micro-application specifically designed to bridge the candidate’s #1 missing skill gap, complete with Google XYZ bullet formulas and a copyable `README.md`.
-* **100% Resume-Personalized 7-Day Sprint Plan:** Structured day-by-day progression from concept immersion to live deployment and outreach.
-* **Expert-Level Adaptive Tech Quiz:** Generates multi-step debugging scenarios and code inspections grounded in the candidate's actual projects and diagnosed gaps, evaluated server-side with zero answer leakage.
-* **Anticipated Technical Questions & Structured STAR Answers:** Prepares students for screening rounds with Situation, Task, Action, and Result breakdowns, plus a ready-to-send LinkedIn cold pitch.
-* **Persistent SQLite Database:** Secure JWT authentication, persistent resume audits (`analyses` table), quiz session tracking (`quiz_sessions` table), and application slips.
-
+- **AI-Powered Resume–Job Description Analysis:** Uses Google Gemini (`gemini-2.5-flash`) through the official `@google/genai` SDK to analyze candidate skills, evidence, project relevance, and transferable skills, with a heuristic fallback when AI analysis is unavailable.
+- **Weighted Readiness Scoring:** Evaluates five dimensions—Required Skills (35%), Evidence Depth (25%), Experience (15%), Preferred Skills (15%), and Transferable Skills (10%)—with blocker rules that can cap the final score.
+- **Evidence-Grounding Checks:** Applies a verification layer to check generated scores and supporting evidence against the supplied resume and job description.
+- **Targeted 48-Hour Project Blueprint:** Suggests a focused mini-project addressing a key skill gap, with implementation guidance, resume bullet-point templates using the Google XYZ format, and a copyable `README.md` template.
+- **Personalized 7-Day Preparation Plan:** Organizes preparation into daily steps, from learning missing concepts to building, deploying, and presenting a relevant project.
+- **Adaptive Technical Quiz:** Generates role-relevant technical questions and scenarios based on identified skill gaps, with server-side answer evaluation.
+- **Interview and Outreach Preparation:** Provides anticipated technical interview questions, structured STAR-format answer guidance, and a LinkedIn outreach message.
+- **SQLite-Based Data Storage and JWT Authentication:** Supports user authentication, resume analysis history, quiz-session tracking, and application records. The current Render Free deployment uses ephemeral local storage, so data persistence across restarts and redeployments is not guaranteed without persistent storage.
 ---
 
 ## 📈 The 7-Day Metric: Measuring Real Student Progress
